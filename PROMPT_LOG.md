@@ -139,13 +139,15 @@ Pocos datos para comparar
 - **Input exacto:** [mismo coche] · precio: $[mediana × 1.10]
 - **Output real:** no se puede correr con este coche. Para el BMW 235 2015 no hay mediana real: Mercado Libre no tiene 3 anuncios de 2014 a 2016.
 - **Por qué decidí dejarlo así:** ya con el token de Apify, probé yo mismo en la liga de prueba el ejemplo que trae la página (Mazda 3) y sí me dio resultado con anuncios reales. Entiendo que el BMW sale con "Pocos datos" porque es un coche con pocas publicaciones, y sé que con coches más comunes la función sí está funcionando. Por eso no corrí un segundo coche para este caso (opción D, rechazada en la Entrada 2).
-- **Prueba real con el Mazda 3 (cerca del borde):** Mazda 3, 2021, precio $350,000, en la liga de prueba. Output real de la página (captura en [`evidencia/mazda3-liga-de-prueba.jpg`](evidencia/mazda3-liga-de-prueba.jpg)):
+- **Prueba real con el Mazda 3 (cerca del borde):** Mazda 3, 2021, precio $350,000, en la liga de prueba. Output real de la página (captura abajo):
 
 ```
 Tu precio está 9.7 % arriba de la mediana del mercado ($31,000 de diferencia).
 Tu precio $350,000 · Mediana del mercado $319,000 · Precio sugerido $319,000
 Encontramos 13 anuncios de mazda 3 de 2020 a 2022 en Mercado Libre:
 ```
+
+  ![Captura de la prueba del Mazda 3 en la liga de prueba](evidencia/mazda3-liga-de-prueba.jpg)
 
   Con una mediana real de $319,000, la función encontró 13 anuncios del año pedido ±1 y calculó bien la diferencia: $350,000 − $319,000 = $31,000, que es 9.7%, dentro del ±10%. El borde exacto para este coche sería $350,900 (mediana × 1.10), y no lo corrí.
 - **Evidencia del borde exacto:** la misma lógica publicada pasa las pruebas del borde con la mediana de $250,000 de la especificación ($275,000 y $225,000 → "En línea con el mercado"; ver la Entrada 4 y la validación con datos simulados abajo).
@@ -188,12 +190,16 @@ Antes, AlumniCar fijaba el precio con el vendedor sin una referencia objetiva: d
 **Herramientas:** Claude (chat) y Claude Code.
 
 **Para qué las usé:**
-- **Claude (chat):** para ayudarme a redactar la especificación de 3 campos a partir de mi idea, preparar el prompt para la herramienta de código y armar la estructura de esta bitácora.
-- **Claude Code:** para escribir el código de la función, integrarla en mi repositorio, crear la rama `comparacion-precio`, correr las pruebas y probar la página en el navegador.
+- **Claude (chat):** para planear. Me ayudó a redactar la especificación de 3 campos a partir de mi idea, preparar los prompts para Claude Code y armar la estructura de esta bitácora. También **revisé contra la rúbrica**: le pasé resúmenes del avance y me dijo qué me faltaba (evidencia real en el deploy, el Prompt 3 con datos reales, separar la versión auditada de los cambios, el párrafo del porqué, el aviso de privacidad como pendiente).
+- **Claude Code:** para el código. Escribió e integró la función en mi repositorio, creó la rama `comparacion-precio`, corrió las pruebas automáticas, probó la página en el navegador, publicó la función en Supabase y la liga de prueba en Cloudflare, e hizo los commits de cada decisión.
 
 **Qué decidí o verifiqué yo:**
-- Elegí la función y la fuente de datos (Apify con Mercado Libre) y definí las reglas: mediana, ±10% y mínimo de 3 anuncios.
-- Pedí que el token nunca fuera en el código y que la versión publicada no se tocara: trabajo en la rama `comparacion-precio`, separada de lo que está en alumnicar.com.
-- Al revisar el plan rechacé que fuera solo para el equipo en el panel: lo quiero en "Vende tu coche" para el vendedor, con porcentaje, precio sugerido y la lista de anuncios. Cuando la IA me avisó que eso chocaba con "solo administradores", elegí pedir nombre y correo con un máximo de 3 comparaciones al día.
-- Cambié el filtro de año a ±1 año para tener más anuncios para comparar. Mantuve el filtro de moneda y dejé el kilometraje como mejora pendiente.
-- La prueba con un coche real queda pendiente hasta guardar el token de Apify y publicar.
+- Elegí la función y definí las reglas: mediana, ±10% y mínimo de 3 anuncios.
+- Antes de elegir la fuente pedí comparar 4 opciones y me quedé con Apify + Mercado Libre, porque es la referencia que usan compradores y vendedores (Entrada 1).
+- Pedí que el token nunca fuera en el código y que la versión publicada no se tocara: trabajo en la rama `comparacion-precio`, separada de alumnicar.com.
+- Al revisar el plan rechacé que fuera solo para el equipo en el panel: lo quiero en "Vende tu coche" para el vendedor, con porcentaje, precio sugerido y la lista de anuncios. Cuando la IA me avisó que eso chocaba con "solo administradores", elegí pedir nombre y correo con un máximo de 3 comparaciones al día (Entrada 3).
+- Cambié el filtro de año a ±1 año y mantuve el filtro de moneda (Entrada 2).
+- En el borde del ±10% pedí más profundidad aunque la IA dijo que no había margen de error; salieron dos casos más que se corrigieron (Entrada 4).
+- Revisé la lista real de anuncios del BMW: acepté pedir el año real y corregir la coma mal puesta, modifiqué el filtro del modelo para que valga el título o la descripción, y rechacé probar con otro coche (Prompt 3, Entrada 2).
+- Corrí yo los casos en la liga de prueba (BMW y Mazda 3) y comparé el resultado con mi especificación (Paso 3).
+- Decidí no pasar la función a alumnicar.com hasta que un abogado revise el aviso de privacidad y los términos.
