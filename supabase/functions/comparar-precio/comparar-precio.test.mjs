@@ -16,6 +16,15 @@ test("precio vacío, cero, negativo o con letras → inválido", () => {
     assert.equal(validarPrecio(v), null, `debería rechazar ${JSON.stringify(v)}`);
   }
 });
+test("coma mal puesta → pide corregir en vez de adivinar ($420,00 no se lee como $42,000)", () => {
+  for (const v of ["420,00", "4,20000", "42,0000", "420,0000", "1,2", "420 00", "420.000", "420,000.5.0", "420, 000"]) {
+    assert.equal(validarPrecio(v), null, `debería pedir corregir ${JSON.stringify(v)}`);
+  }
+  assert.equal(validarPrecio("420,000"), 420000);
+  assert.equal(validarPrecio("1,250,000"), 1250000);
+  assert.equal(validarPrecio("420 000"), 420000);
+  assert.equal(validarPrecio("$420,000.50"), 420000.5);
+});
 test("precio con formatos válidos", () => {
   assert.equal(validarPrecio("350000"), 350000);
   assert.equal(validarPrecio("350,000"), 350000);
@@ -172,6 +181,27 @@ test("sin año identificable no entra (la búsqueda ya no lleva el año)", () =>
     anuncio(402000, { title: "Mazda 3", attributes: [{ id: "VEHICLE_YEAR", value_name: "2022" }] }), // ✔
   ], 2021);
   assert.deepEqual(precios, [401000, 402000]);
+});
+test("solo entran anuncios que mencionan el modelo en el título o la descripción (caso real: se coló un Serie 5)", () => {
+  const bmw = (title, extra = {}) => ({ title, price: 400000, currency: "MXN", itemId: "MLM" + Math.random(), year: 2015, ...extra });
+  const precios = extraerPrecios([
+    bmw("Bmw Serie 5 2015"),                                                     // otro modelo ✘
+    bmw("Bmw Serie 2 3.0 M235ia M Sport At", { price: 335000 }),                 // "235" dentro de "M235ia" ✔
+    bmw("Bmw Serie 2 Coupé", { price: 350000, description: "Versión M235i, 3.0 turbo" }), // en la descripción ✔
+    bmw("Bmw M240i Coupé"),                                                      // otro modelo ✘
+  ], 2015, "235");
+  assert.deepEqual(precios, [335000, 350000]);
+});
+test("modelos cortos tienen que ser palabra completa: el 3 de Mazda 3 no es el 3 de 2023 ni de CX-30", () => {
+  const mazda = (title) => ({ title, price: 400000, currency: "MXN", itemId: "MLM" + Math.random(), year: 2021 });
+  const precios = extraerPrecios([mazda("Mazda 3 i Touring"), mazda("Mazda CX30 i Sport 2023"), mazda("Mazda 2 2021 Sedán")], 2021, "3");
+  assert.deepEqual(precios, [400000]);
+});
+test("el año sale del atributo Año que trae Apify con detalles", () => {
+  assert.equal(anioDeAnuncio({ title: "Bmw Serie 2 2.0 M235i Xdrive Grand Coupe", attributes: [{ name: "Año", value: "2021" }] }), 2021);
+});
+test("la búsqueda en Apify pide los detalles de cada anuncio (para leer el año)", () => {
+  assert.equal(entradaApify({ marca: "BMW", modelo: "235", anio: 2015 }).scrapeProductDetails, true);
 });
 test("año del anuncio: datos estructurados primero, luego el título", () => {
   assert.equal(anioDeAnuncio({ title: "Mazda 3 2019", year: 2021 }), 2021);

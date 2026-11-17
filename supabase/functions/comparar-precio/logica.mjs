@@ -25,12 +25,15 @@ export const MENSAJES = {
 
 // Precio del vendedor en MXN. Acepta "350000", "350,000", "$350,000" o "350000.50".
 // Vacío, cero, negativo o con letras → null (hay que pedir que se corrija).
+// Las comas (o espacios) solo se aceptan separando miles de 3 en 3: "420,000" sí; "420,00" o "4,20000" no,
+// porque no se sabe qué quiso decir el vendedor (¿$420,000 o $420.00?) y es mejor pedir que lo corrija.
+export const FORMATO_PRECIO = /^(\d+|\d{1,3}(,\d{3})+|\d{1,3}( \d{3})+)(\.\d{1,2})?$/;
 export function validarPrecio(entrada) {
   if (entrada === null || entrada === undefined) return null;
   if (typeof entrada === "number") return Number.isFinite(entrada) && entrada > 0 ? entrada : null;
-  const limpio = String(entrada).trim().replace(/^\$\s*/, "").replace(/[\s,]/g, "");
-  if (!/^\d+(\.\d{1,2})?$/.test(limpio)) return null;
-  const n = Number(limpio);
+  const texto = String(entrada).trim().replace(/^\$\s*/, "");
+  if (!FORMATO_PRECIO.test(texto)) return null;
+  const n = Number(texto.replace(/[\s,]/g, ""));
   return n > 0 ? n : null;
 }
 
@@ -61,7 +64,9 @@ export function entradaApify({ marca, modelo }) {
     categoryId: CATEGORIA_AUTOS_MX,
     condition: "any",
     maxItems: MAX_ANUNCIOS_APIFY,
-    scrapeProductDetails: false,
+    // Con detalles: trae el año real (atributo "Año") y la descripción de cada anuncio.
+    // Cuesta ~2 veces más que sin detalles, pero sin el año casi ningún anuncio se puede usar.
+    scrapeProductDetails: true,
     includeSponsored: false,
   };
 }
@@ -80,10 +85,24 @@ export function anioDeAnuncio(a) {
   return anios.length === 1 ? Number(anios[0]) : null;
 }
 
+// Palabras sin acentos ni signos: "Gran Coupé M235i" → ["gran", "coupe", "m235i"]
+const palabras = t => String(t ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").split(/[^a-z0-9]+/).filter(Boolean);
+
+// ¿El anuncio menciona el modelo que escribió el vendedor, en el título o en la descripción?
+// Cada palabra del modelo tiene que aparecer. Las de 3 o más caracteres pueden venir dentro de otra
+// ("235" dentro de "M235i"); las cortas tienen que ser palabra completa, para que el "3" de "Mazda 3"
+// no se confunda con el "3" de "2023".
+export function mencionaModelo(a, modelo) {
+  const buscadas = palabras(modelo);
+  if (!buscadas.length) return true;
+  const texto = palabras(`${a.title ?? ""} ${a.description ?? ""}`);
+  return buscadas.every(b => texto.some(w => w === b || (b.length >= 3 && w.includes(b))));
+}
+
 // De los anuncios que regresa Apify, se queda con los que sirven para comparar:
-// en MXN, del año pedido ±1, sin repetidos y con precio de coche (no de refacción).
+// del modelo pedido, en MXN, del año pedido ±1, sin repetidos y con precio de coche (no de refacción).
 // Revisa cada anuncio y dice si entra o por qué se descarta (para revisar la lista a mano).
-export function clasificarAnuncios(anuncios, anio) {
+export function clasificarAnuncios(anuncios, anio, modelo = "") {
   const lista = [], descartados = [];
   if (!Array.isArray(anuncios)) return { lista, descartados };
   const vistos = new Set();
@@ -96,6 +115,7 @@ export function clasificarAnuncios(anuncios, anio) {
     if (!precio) { fuera("sin precio"); continue; }
     if (precio < PRECIO_MINIMO_ANUNCIO) { fuera("precio menor a $10,000 (refacción o enganche)"); continue; }
     if (a.currency && a.currency !== "MXN") { fuera(`moneda ${a.currency}`); continue; }
+    if (!mencionaModelo(a, modelo)) { fuera(`no menciona "${modelo}" en el título ni en la descripción`); continue; }
     const anioA = anioDeAnuncio(a);
     if (anioA === null) { fuera("sin año identificable"); continue; }
     if (Math.abs(anioA - anio) > RANGO_ANIOS) { fuera(`año ${anioA}, fuera de ${anio - RANGO_ANIOS} a ${anio + RANGO_ANIOS}`); continue; }
@@ -106,8 +126,8 @@ export function clasificarAnuncios(anuncios, anio) {
   lista.sort((x, y) => x.precio - y.precio);
   return { lista, descartados };
 }
-export const extraerAnuncios = (anuncios, anio) => clasificarAnuncios(anuncios, anio).lista;
-export const extraerPrecios = (anuncios, anio) => extraerAnuncios(anuncios, anio).map(a => a.precio);
+export const extraerAnuncios = (anuncios, anio, modelo) => clasificarAnuncios(anuncios, anio, modelo).lista;
+export const extraerPrecios = (anuncios, anio, modelo) => extraerAnuncios(anuncios, anio, modelo).map(a => a.precio);
 
 export function mediana(valores) {
   const v = [...valores].sort((x, y) => x - y);
@@ -158,7 +178,7 @@ export async function compararPrecio(body, consultarApify) {
   }
   if (!Array.isArray(anuncios)) return { estado: "sin_respuesta", mensaje: MENSAJES.sin_respuesta };
 
-  const { lista, descartados } = clasificarAnuncios(anuncios, datos.anio);
+  const { lista, descartados } = clasificarAnuncios(anuncios, datos.anio, datos.modelo);
   // Modo revisión ({ diagnostico: true }): también regresa los descartados y su motivo. No cambia el resultado.
   const extra = body?.diagnostico === true ? { recibidos: anuncios.length, descartados } : {};
   if (lista.length < MIN_ANUNCIOS) {

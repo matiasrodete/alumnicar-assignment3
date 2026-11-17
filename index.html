@@ -1891,7 +1891,8 @@ function renderPanel(){
 // ---- Comparador de precio contra Mercado Libre (v1.1) ----
 // La consulta a Apify la hace la función de Supabase "comparar-precio" (el token vive allá, no aquí).
 let cmp = { vals: { marca: "", modelo: "", anio: "", kilometraje: "", precio_vendedor: "" }, res: null, busy: false };
-const precioValido = v => { const s = String(v ?? "").trim().replace(/^\$\s*/, "").replace(/[\s,]/g, ""); return /^\d+(\.\d{1,2})?$/.test(s) && Number(s) > 0; };
+// Misma regla que la función: comas o espacios solo separando miles de 3 en 3 ("420,000" sí, "420,00" no)
+const precioValido = v => { const s = String(v ?? "").trim().replace(/^\$\s*/, ""); return /^(\d+|\d{1,3}(,\d{3})+|\d{1,3}( \d{3})+)(\.\d{1,2})?$/.test(s) && Number(s.replace(/[\s,]/g, "")) > 0; };
 function comparadorPanel(){
   const v = cmp.vals, r = cmp.res;
   const inp = (k, l, extra = "") => `<label>${l}<input id="cp-${k}" value="${esc(v[k])}" ${extra}></label>`;
