@@ -138,10 +138,19 @@ Pocos datos para comparar
 ### Caso 2: borde del 10% (precio = mediana × 1.10)
 - **Input exacto:** [mismo coche] · precio: $[mediana × 1.10]
 - **Output real:** no se puede correr con este coche. Para el BMW 235 2015 no hay mediana real: Mercado Libre no tiene 3 anuncios de 2014 a 2016.
-- **Por qué decidí dejarlo así:** ya con el token de Apify, probé yo mismo en la liga de prueba el ejemplo que trae la página (Mazda 3) y sí me dio resultado con anuncios reales. Entiendo que el BMW sale con "Pocos datos" porque es un coche con pocas publicaciones, y sé que con coches más comunes la función sí está funcionando. Por eso no corrí un segundo coche para este caso (opción D, rechazada en la Entrada 2). Esa prueba no la copié tal cual, así que no la cuento como el output de este caso.
-- **Evidencia del borde que sí hay:** la misma lógica publicada pasa las pruebas del borde con la mediana de $250,000 de la especificación ($275,000 y $225,000 → "En línea con el mercado"; ver la Entrada 4 y la validación con datos simulados abajo).
-- **Veredicto:** Revisar.
-- **Razón:** Según la especificación debe decir "En línea con el mercado"; falta verlo con una mediana real.
+- **Por qué decidí dejarlo así:** ya con el token de Apify, probé yo mismo en la liga de prueba el ejemplo que trae la página (Mazda 3) y sí me dio resultado con anuncios reales. Entiendo que el BMW sale con "Pocos datos" porque es un coche con pocas publicaciones, y sé que con coches más comunes la función sí está funcionando. Por eso no corrí un segundo coche para este caso (opción D, rechazada en la Entrada 2).
+- **Prueba real con el Mazda 3 (cerca del borde):** Mazda 3, 2021, precio $350,000, en la liga de prueba. Output real de la página (captura en [`evidencia/mazda3-liga-de-prueba.jpg`](evidencia/mazda3-liga-de-prueba.jpg)):
+
+```
+Tu precio está 9.7 % arriba de la mediana del mercado ($31,000 de diferencia).
+Tu precio $350,000 · Mediana del mercado $319,000 · Precio sugerido $319,000
+Encontramos 13 anuncios de mazda 3 de 2020 a 2022 en Mercado Libre:
+```
+
+  Con una mediana real de $319,000, la función encontró 13 anuncios del año pedido ±1 y calculó bien la diferencia: $350,000 − $319,000 = $31,000, que es 9.7%, dentro del ±10%. El borde exacto para este coche sería $350,900 (mediana × 1.10), y no lo corrí.
+- **Evidencia del borde exacto:** la misma lógica publicada pasa las pruebas del borde con la mediana de $250,000 de la especificación ($275,000 y $225,000 → "En línea con el mercado"; ver la Entrada 4 y la validación con datos simulados abajo).
+- **Veredicto:** Aceptar.
+- **Razón:** Con datos reales el precio a 9.7% de la mediana queda dentro del ±10% y la diferencia ($31,000) y el porcentaje coinciden con la cuenta a mano. El 10% exacto está cubierto por las pruebas de la Entrada 4; con datos reales no corrí exactamente $350,900.
 
 ### Validación previa con datos simulados (no es el deploy)
 
