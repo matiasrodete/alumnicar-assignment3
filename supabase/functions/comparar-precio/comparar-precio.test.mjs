@@ -41,7 +41,7 @@ test("mediana con número impar y par de precios", () => {
 
 // --- reglas de comparación (referencia = 400,000) ---
 test("más de 10% arriba → Por encima del mercado + diferencia y porcentaje", () => {
-  assert.deepEqual(veredicto(460000, 400000), { estado: "arriba", mensaje: "Por encima del mercado", diferencia: 60000, porcentaje: 15 });
+  assert.deepEqual(veredicto(460000, 400000), { estado: "arriba", mensaje: "Por encima del mercado", diferencia: 60000, porcentaje: 15, texto_porcentaje: "15.0 % arriba" });
 });
 test("exactamente +10% → En línea con el mercado", () => {
   assert.equal(veredicto(440000, 400000).estado, "en_linea");
@@ -50,7 +50,61 @@ test("exactamente -10% → En línea con el mercado", () => {
   assert.equal(veredicto(360000, 400000).estado, "en_linea");
 });
 test("más de 10% abajo → Por debajo del mercado + diferencia y porcentaje", () => {
-  assert.deepEqual(veredicto(340000, 400000), { estado: "abajo", mensaje: "Por debajo del mercado", diferencia: 60000, porcentaje: -15 });
+  assert.deepEqual(veredicto(340000, 400000), { estado: "abajo", mensaje: "Por debajo del mercado", diferencia: 60000, porcentaje: -15, texto_porcentaje: "15.0 % abajo" });
+});
+
+// --- la línea del ±10% (Prompt 4): mediana de $250,000 ---
+test("borde del 10%: $274,999 / $275,000 / $275,001 / $225,000 / $224,999", () => {
+  const casos = [
+    [274999, "en_linea", "10.0 % arriba"],
+    [275000, "en_linea", "10.0 % arriba"],             // +10% exacto
+    [275001, "arriba",   "poco más del 10 % arriba"],  // el redondeo diría 10.0 %: no se contradice con la etiqueta
+    [225000, "en_linea", "10.0 % abajo"],              // −10% exacto
+    [224999, "abajo",    "poco más del 10 % abajo"],
+  ];
+  for (const [precio, estado, texto] of casos) {
+    const v = veredicto(precio, 250000);
+    assert.equal(v.estado, estado, `$${precio}`);
+    assert.equal(v.texto_porcentaje, texto, `$${precio}`);
+  }
+});
+test("borde del 10% con centavos: un centavo arriba o abajo ya cruza la línea", () => {
+  assert.equal(veredicto(275000.01, 250000).estado, "arriba");
+  assert.equal(veredicto(224999.99, 250000).estado, "abajo");
+  assert.equal(veredicto(275000.00, 250000).estado, "en_linea");
+});
+test("borde del 10% con mediana impar o con decimales (promedio de dos anuncios)", () => {
+  // mediana de un número par de anuncios puede traer .5: 10% de 250,000.5 = 25,000.05
+  assert.equal(veredicto(275000.55, 250000.5).estado, "en_linea"); // exacto +10%
+  assert.equal(veredicto(275000.56, 250000.5).estado, "arriba");
+  assert.equal(veredicto(225000.45, 250000.5).estado, "en_linea"); // exacto −10%
+  assert.equal(veredicto(225000.44, 250000.5).estado, "abajo");
+});
+test("borde del 10% cuando la mediana trae medio centavo (sin redondear la mediana)", () => {
+  // anuncios de $250,000.01 y $250,000.02 → mediana 250,000.015; +10% exacto = 275,000.0165
+  const m = mediana([250000.01, 250000.02]);
+  assert.equal(veredicto(275000.01, m).estado, "en_linea");  // abajo del borde
+  assert.equal(veredicto(275000.02, m).estado, "arriba");    // arriba del borde
+  assert.equal(veredicto(225000.02, m).estado, "en_linea");  // −10% exacto = 225,000.0135
+  assert.equal(veredicto(225000.01, m).estado, "abajo");
+});
+test("el texto del porcentaje nunca contradice la etiqueta, en todo el rango de ±12%", () => {
+  const r = 250000;
+  for (let precio = 220000; precio <= 280000; precio += 1) {
+    const v = veredicto(precio, r);
+    if (v.estado === "en_linea") assert.ok(!v.texto_porcentaje.startsWith("poco más"), `$${precio}`);
+    else assert.ok(!/^(10\.0|[0-9]\.\d) %/.test(v.texto_porcentaje), `$${precio}: ${v.texto_porcentaje}`);
+    if (v.estado === "arriba") assert.match(v.texto_porcentaje, /arriba$/);
+    if (v.estado === "abajo") assert.match(v.texto_porcentaje, /abajo$/);
+  }
+});
+test("diferencias mínimas no se ven como 0 % ni como igual; -0 no aparece", () => {
+  const v = veredicto(250010, 250000);
+  assert.equal(v.texto_porcentaje, "menos del 0.1 % arriba");
+  const w = veredicto(249990, 250000);
+  assert.equal(w.texto_porcentaje, "menos del 0.1 % abajo");
+  assert.ok(Object.is(w.porcentaje, 0));                      // no -0
+  assert.equal(veredicto(250000, 250000).texto_porcentaje, "igual a la mediana");
 });
 test("10% exacto con decimales no falla por redondeo", () => {
   assert.equal(veredicto(366666.3, 333333).estado, "en_linea");     // +10% exacto
@@ -195,6 +249,13 @@ test("público: 10 comparaciones desde la misma conexión → límite aunque cam
   const h = crearManejador({ token: "t", esAdmin: async () => false, registro: registroFalso({ porIp: 10 }), fetchFn: apifyOk() });
   const res = await h(pedir({ ...base, ...contacto, precio_vendedor: "400000" }));
   assert.equal(res.status, 429);
+});
+test("público: el mensaje al equipo usa el mismo texto que la página en el borde del 10%", async () => {
+  const registro = registroFalso();
+  const h = crearManejador({ token: "t", esAdmin: async () => false, registro, fetchFn: apifyOk([240000, 250000, 260000]) });
+  await h(pedir({ ...base, ...contacto, precio_vendedor: "275001" }));
+  assert.match(registro.leads[0].message, /Por encima del mercado \(poco más del 10 % arriba de la mediana de \$250,000, 3 anuncios\)/);
+  assert.doesNotMatch(registro.leads[0].message, /\+10%/);
 });
 test("público: solo la primera comparación del día crea contacto", async () => {
   const registro = registroFalso({ porCorreo: 1 });

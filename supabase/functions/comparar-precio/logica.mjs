@@ -108,15 +108,31 @@ export function mediana(valores) {
   return n % 2 ? v[(n - 1) / 2] : (v[n / 2 - 1] + v[n / 2]) / 2;
 }
 
-// Compara en centavos y con enteros para que "exactamente 10%" no falle por redondeo.
+// Texto del porcentaje para mostrar (página y mensaje al equipo). Nunca contradice la etiqueta:
+// - el redondeo no puede hacer que algo "Por encima" diga "10.0 %": dice "poco más del 10 %";
+// - una diferencia mínima no puede verse como "0.0 %" ni como "igual": dice "menos del 0.1 %";
+// - "igual a la mediana" solo si el precio es idéntico al centavo.
+// p y r en milésimas de peso (enteros).
+export function textoPorcentaje(p, r, estado) {
+  if (p === r) return "igual a la mediana";
+  const lado = p > r ? "arriba" : "abajo";
+  const decimas = Math.round((Math.abs(p - r) / r) * 1000); // porcentaje × 10, redondeado
+  if (estado !== "en_linea" && decimas <= 100) return `poco más del 10 % ${lado}`;
+  if (decimas === 0) return `menos del 0.1 % ${lado}`;
+  return `${(decimas / 10).toFixed(1)} % ${lado}`;
+}
+
+// Compara con enteros (milésimas de peso) para que "exactamente 10%" no falle por redondeo.
+// Milésimas y no centavos: la mediana de dos anuncios con centavos puede traer medio centavo
+// (p. ej. 250,000.015), y así no se redondea. La etiqueta se decide solo con enteros;
+// el porcentaje es aparte y solo sirve para mostrarlo.
 export function veredicto(precioVendedor, referencia) {
-  const p = Math.round(precioVendedor * 100);
-  const r = Math.round(referencia * 100);
-  const diferencia = Math.abs(p - r) / 100;
-  const porcentaje = Math.round(((p - r) / r) * 1000) / 10; // con signo, 1 decimal: +12.5 = 12.5% arriba
-  if ((p - r) * 10 > r) return { estado: "arriba", mensaje: MENSAJES.arriba, diferencia, porcentaje };
-  if ((r - p) * 10 > r) return { estado: "abajo", mensaje: MENSAJES.abajo, diferencia, porcentaje };
-  return { estado: "en_linea", mensaje: MENSAJES.en_linea, diferencia, porcentaje };
+  const p = Math.round(precioVendedor * 1000);
+  const r = Math.round(referencia * 1000);
+  const diferencia = Math.round(Math.abs(p - r) / 10) / 100; // en pesos, a centavos
+  const porcentaje = Math.round(((p - r) / r) * 1000) / 10 || 0; // con signo, 1 decimal; "|| 0" evita un -0
+  const estado = (p - r) * 10 > r ? "arriba" : (r - p) * 10 > r ? "abajo" : "en_linea";
+  return { estado, mensaje: MENSAJES[estado], diferencia, porcentaje, texto_porcentaje: textoPorcentaje(p, r, estado) };
 }
 
 // Orquesta todo. `consultarApify(input)` regresa el arreglo de anuncios o lanza un error.

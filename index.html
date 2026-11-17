@@ -1627,12 +1627,10 @@ const CQ_SIN_RESPUESTA = { estado: "sin_respuesta", mensaje: "No se pudo consult
 function cqMsg(text, warn = true){ document.getElementById("cqRes").innerHTML = `<p class="msg${warn ? " warn" : ""}" role="status">${esc(text)}</p>`; }
 function cqPintar(r, v){
   if (!r.referencia) { cqMsg(r.mensaje); return; }
-  // Si el redondeo deja "10.0 %" pero el precio sí pasó la línea del 10 %, se dice "poco más del 10 %"
-  const pct = r.estado !== "en_linea" && Math.abs(r.porcentaje) <= 10 ? "poco más del 10"
-    : Math.abs(r.porcentaje).toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const lado = r.porcentaje > 0 ? "arriba" : "abajo";
-  const frase = r.porcentaje === 0 ? "Tu precio es igual a la mediana del mercado."
-    : `Tu precio está <b class="mono">${pct}&nbsp;%</b> ${lado} de la mediana del mercado (<b class="mono">${mxn(Math.round(r.diferencia))}</b> de diferencia).`;
+  // El texto del porcentaje lo arma la función (el mismo que recibe el equipo), para que nunca contradiga la etiqueta
+  const texto = String(r.texto_porcentaje || "");
+  const frase = texto === "igual a la mediana" ? "Tu precio es igual a la mediana del mercado."
+    : !texto ? "" : `Tu precio está <b class="mono">${esc(texto).replace(" %", "&nbsp;%")}</b> de la mediana del mercado (<b class="mono">${mxn(Math.round(r.diferencia))}</b> de diferencia).`;
   const anios = r.anios ? `${r.anios[0]} a ${r.anios[1]}` : esc(v.anio);
   const lista = (r.listados || []).slice(0, 12).map(l => `<li><span class="t">${esc(l.titulo || "Anuncio en Mercado Libre")}<br><span class="y">${esc(l.anio)}</span>${l.url ? ` · <a href="${esc(l.url)}" target="_blank" rel="noopener nofollow">Ver anuncio</a>` : ""}</span><b class="mono">${mxn(Math.round(l.precio))}</b></li>`).join("");
   const mas = r.listados && r.listados.length > 12 ? `<p class="cmp-foot">Y ${r.listados.length - 12} anuncios más.</p>` : "";

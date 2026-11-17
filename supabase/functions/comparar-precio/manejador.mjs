@@ -81,7 +81,7 @@ export function crearManejador({ token, esAdmin, registro, fetchFn = fetch }) {
     if (usados.correo === 0) {
       const coche = `${datos.marca} ${datos.modelo} ${datos.anio}, ${datos.kilometraje.toLocaleString("es-MX")} km`;
       const resumen = r.referencia
-        ? `${r.mensaje} (${r.porcentaje > 0 ? "+" : ""}${r.porcentaje}% contra la mediana de ${pesos(r.referencia)}, ${r.anuncios} anuncios)`
+        ? `${r.mensaje} (${r.texto_porcentaje} de la mediana de ${pesos(r.referencia)}, ${r.anuncios} anuncios)`
         : r.mensaje;
       await Promise.resolve(registro.crearLead({
         intent: "vender", name: contacto.nombre, email: contacto.correo, is_uni: null,
