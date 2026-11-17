@@ -6,6 +6,8 @@
 
 ## Paso 1 — Especificación (auditada en la Sesión 19 por [nombre del auditor])
 
+### Versión auditada (Sesión 19, sin cambios)
+
 **Qué hace:** Cuando el equipo registra un coche en el panel, la app consulta en Mercado Libre, mediante Apify, los anuncios de la misma marca, modelo y año, calcula la mediana de sus precios y la compara con el precio que pide el vendedor. Muestra "Por encima del mercado" si está más de 10% arriba, "En línea con el mercado" si está dentro de ±10% y "Por debajo del mercado" si está más de 10% abajo, junto con la diferencia en pesos.
 
 **Qué datos necesita:**
@@ -21,10 +23,17 @@
 - Menos de 3 anuncios → "Pocos datos para comparar", sin comparación.
 - Precio vacío, en cero o con letras → pide corregirlo y no compara.
 
-**Cambios que decidí después de revisar el plan (17 de noviembre):**
-- **Quién la usa:** además del equipo en el panel, el **vendedor** la usa en "Vende tu coche". Ve su precio, si está arriba o abajo y en qué porcentaje, un **precio sugerido** (la mediana) y la lista de anuncios con los que se comparó.
-- **Qué anuncios entran:** el mismo año, **uno antes y uno después**, en lugar de solo el mismo año.
-- Lo demás sigue igual: mediana, ±10% (el 10% exacto es "En línea"), mínimo 3 anuncios, precio inválido y token en variable de entorno.
+### Cambios posteriores y por qué (17 de noviembre)
+
+Los decidí yo al revisar el plan de la IA (Entradas 2 y 3), no para que la especificación coincidiera con lo que ya había construido. La versión auditada de arriba se queda tal cual como referencia.
+
+| Campo | Versión auditada | Cambio | Por qué |
+|---|---|---|---|
+| Qué hace: quién la usa | "Cuando el equipo registra un coche en el panel" | También el **vendedor**, en "Vende tu coche". Ve su precio, si está arriba o abajo y en qué porcentaje, un **precio sugerido** (la mediana) y la lista de anuncios con los que se comparó. Deja nombre y correo; máximo 3 comparaciones al día. | El vendedor es quien necesita la referencia al decidir su precio, y AlumniCar recibe su contacto. El límite cuida los créditos de Apify. |
+| Qué hace: qué anuncios | "de la misma marca, modelo y año" | El mismo año, **uno antes y uno después**. | Con un solo año hay pocos anuncios para comparar. |
+| Qué datos necesita | Marca, modelo, año, km y precio | Se agregan **nombre y correo** del vendedor (solo en la versión pública). | Para el límite diario y para que el equipo dé seguimiento. |
+
+Lo demás no cambia: mediana, ±10% (el 10% exacto es "En línea"), mínimo 3 anuncios, precio inválido y token en variable de entorno. Los casos de "Cómo se sabrá que funciona" siguen siendo los mismos.
 
 ## Paso 2 — Construcción: aceptar / rechazar / revisar
 
@@ -139,7 +148,14 @@ Con la mediana de $250,000 de mi especificación, los casos dan: $300,000 → Po
 
 ## Por qué esta función resuelve el problema
 
-Antes, AlumniCar fijaba el precio con el vendedor sin una referencia objetiva: dependía de lo que el vendedor creía que valía su coche. Ahora el propio vendedor, desde "Vende tu coche", ve la mediana de los anuncios de Mercado Libre de su marca y modelo (mismo año, uno antes y uno después), si su precio está arriba, en línea o abajo y en qué porcentaje, y un precio sugerido. Con datos simulados cumple los casos de la especificación, incluido el borde exacto de +10%. Falta probarla con un coche real en el deploy y tomar en cuenta el kilometraje.
+Antes, AlumniCar fijaba el precio con el vendedor sin una referencia objetiva: dependía de lo que el vendedor creía que valía su coche, y un precio fuera de mercado se descubría hasta que el coche no se vendía. Mi especificación pide que la app "calcula la mediana de sus precios y la compara con el precio que pide el vendedor" y muestre "Por encima", "En línea" o "Por debajo del mercado" "junto con la diferencia en pesos", con precios que "vienen de Apify; nadie los escribe". Eso hace la función: el vendedor ve, **antes de publicar**, si su precio está fuera de mercado, en qué porcentaje y cuál sería un precio sugerido, y AlumniCar recibe su contacto para darle seguimiento. La evidencia del Paso 3 muestra que la línea del ±10% se cumple, incluido el caso de "$275,000 (exactamente +10%) → En línea con el mercado". [Completar con el resultado de los Casos 1 y 2 con un coche real.] Lo que todavía no resuelve: el kilometraje no se usa para elegir anuncios, y los precios de Mercado Libre son de publicación, no de venta.
+
+## Pendientes conocidos antes de pasar a producción
+
+- **Aviso de privacidad:** la versión pública pide nombre y correo, y el aviso de privacidad del sitio todavía es un borrador pendiente de revisión legal. Antes de publicar la función para el público, hay que terminarlo y que lo revise un abogado.
+- **Costo de Apify:** con el plan gratis alcanzan unas 30 comparaciones al mes. Si el comparador público se usa mucho, hay que pagar Apify o traer menos anuncios por consulta.
+- **Kilometraje:** se pide pero no filtra anuncios. Mejora pendiente.
+- **El correo no se verifica:** alguien podría usar correos distintos para pasar el límite de 3 al día. El límite de 10 por conexión lo frena, pero no del todo.
 
 ## Uso de IA
 
