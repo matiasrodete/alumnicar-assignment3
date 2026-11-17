@@ -4,7 +4,7 @@
 **Repositorio:** https://github.com/matiasrodete/alumnicar-web — rama de trabajo `comparacion-precio`.
 **Función:** comparación del precio del vendedor contra el mercado (Mercado Libre vía Apify).
 
-## Paso 1 — Especificación (auditada en la Sesión 19 por [nombre del auditor])
+## Paso 1 — Especificación (auditada en la Sesión 19 por Joseph)
 
 ### Versión auditada (Sesión 19, sin cambios)
 
