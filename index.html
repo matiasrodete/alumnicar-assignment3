@@ -585,6 +585,31 @@ mark.fill{background:#FFE98A;color:#3D3000;padding:1px 4px;border-radius:4px}
 .foot-nav{display:flex;flex-wrap:wrap;gap:8px 18px}
 .foot-nav a{text-decoration:none;font-weight:500}
 .foot-nav a:hover{color:var(--ink);text-decoration:underline}
+/* comparador público de precio (Vende tu coche) */
+.cmp-pub{margin-top:48px;color:var(--ink)}
+.cmp-pub .eyebrow{color:var(--accent-ink)}
+.cmp-pub h3{font-size:clamp(22px,3vw,28px)}
+.cmp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.cmp-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:460px){.cmp-grid{grid-template-columns:1fr}}
+.cmp-res{display:grid;gap:14px;border-top:1px dashed var(--line);padding-top:18px}
+.cmp-head{display:grid;gap:8px}
+.cmp-tag{justify-self:start;font:700 13px/1 var(--mono);padding:8px 12px;border-radius:6px;background:var(--soft);color:var(--ink)}
+.cmp-tag.arriba,.cmp-tag.abajo{background:var(--accent-soft);color:var(--accent-ink)}
+.cmp-tag.en_linea{background:var(--ok-soft);color:var(--ok)}
+.cmp-nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0}
+@media (max-width:560px){.cmp-nums{grid-template-columns:1fr}}
+.cmp-nums div{background:var(--ground);border-radius:14px;padding:14px 16px;display:grid;gap:4px}
+.cmp-nums dt{font-size:13px;color:var(--muted);font-weight:600}
+.cmp-nums dd{margin:0;font:700 22px var(--mono)}
+.cmp-nums .sug{background:var(--accent-soft)}
+.cmp-list{list-style:none;margin:0;padding:0;display:grid;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.cmp-list li{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:14px;align-items:center}
+.cmp-list li:last-child{border-bottom:0}
+.cmp-list .t{min-width:0;overflow-wrap:anywhere}
+.cmp-list .y{color:var(--muted);font-size:13px}
+.cmp-list a{font-size:13px}
+.cmp-foot{color:var(--muted);font-size:13px}
 </style>
 </head>
 <body>
@@ -937,6 +962,29 @@ mark.fill{background:#FFE98A;color:#3D3000;padding:1px 4px;border-radius:4px}
         <li><div><b>Lo publicamos</b><span>Definimos contigo el precio y subimos el anuncio.</span></div></li>
         <li><div><b>Cerramos la venta</b><span>Coordinamos las pruebas de manejo guiadas, el pago y el trámite.</span></div></li>
       </ol>
+    </div>
+    <div class="wrap">
+      <form class="contact cmp-pub" id="cmpPub" novalidate>
+        <div>
+          <p class="eyebrow">Antes de decidir tu precio</p>
+          <h3>Compara tu precio con el mercado</h3>
+          <p class="note">Buscamos en Mercado Libre coches de la misma marca y modelo, del mismo año, uno antes y uno después, y te decimos si tu precio está arriba, en línea o abajo del mercado. Puedes hacer hasta 3 comparaciones al día.</p>
+        </div>
+        <div class="row">
+          <label for="cq-nombre">Nombre<input id="cq-nombre" autocomplete="name" placeholder="Andrea López"></label>
+          <label for="cq-correo">Email<input id="cq-correo" type="email" autocomplete="email" placeholder="andrea@correo.com"></label>
+        </div>
+        <div class="cmp-grid">
+          <label for="cq-marca">Marca<input id="cq-marca" autocomplete="off" placeholder="Mazda"></label>
+          <label for="cq-modelo">Modelo<input id="cq-modelo" autocomplete="off" placeholder="3"></label>
+          <label for="cq-anio">Año<input id="cq-anio" inputmode="numeric" maxlength="4" placeholder="2021"></label>
+          <label for="cq-kilometraje">Kilometraje<input id="cq-kilometraje" inputmode="numeric" placeholder="52000"></label>
+          <label for="cq-precio_vendedor">Precio que quieres (MXN)<input id="cq-precio_vendedor" inputmode="decimal" placeholder="350000"></label>
+        </div>
+        <button class="btn btn-accent" type="submit" id="cqBtn">Comparar con el mercado</button>
+        <p class="privacy-line">Al comparar aceptas que usemos tus datos para contactarte sobre la venta de tu coche, como se explica en nuestro <a href="#privacidad">aviso de privacidad</a>.</p>
+        <div id="cqRes" aria-live="polite"></div>
+      </form>
     </div>
   </section>
 
@@ -1570,6 +1618,70 @@ document.addEventListener("click", e => {
   }
 }, true);
 document.getElementById("sellBtn").addEventListener("click", () => { document.getElementById("i-sell").checked = true; syncIntent(); });
+
+// ---- Comparador público de precio (Vende tu coche) ----
+// La consulta a Apify la hace la función de Supabase "comparar-precio" (el token vive allá, no aquí).
+// Máximo 3 comparaciones por correo al día; eso lo controla la función.
+const CQ_CAMPOS = ["nombre","correo","marca","modelo","anio","kilometraje","precio_vendedor"];
+const CQ_SIN_RESPUESTA = { estado: "sin_respuesta", mensaje: "No se pudo consultar el precio, intenta más tarde" };
+function cqMsg(text, warn = true){ document.getElementById("cqRes").innerHTML = `<p class="msg${warn ? " warn" : ""}" role="status">${esc(text)}</p>`; }
+function cqPintar(r, v){
+  if (!r.referencia) { cqMsg(r.mensaje); return; }
+  // Si el redondeo deja "10.0 %" pero el precio sí pasó la línea del 10 %, se dice "poco más del 10 %"
+  const pct = r.estado !== "en_linea" && Math.abs(r.porcentaje) <= 10 ? "poco más del 10"
+    : Math.abs(r.porcentaje).toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const lado = r.porcentaje > 0 ? "arriba" : "abajo";
+  const frase = r.porcentaje === 0 ? "Tu precio es igual a la mediana del mercado."
+    : `Tu precio está <b class="mono">${pct}&nbsp;%</b> ${lado} de la mediana del mercado (<b class="mono">${mxn(Math.round(r.diferencia))}</b> de diferencia).`;
+  const anios = r.anios ? `${r.anios[0]} a ${r.anios[1]}` : esc(v.anio);
+  const lista = (r.listados || []).slice(0, 12).map(l => `<li><span class="t">${esc(l.titulo || "Anuncio en Mercado Libre")}<br><span class="y">${esc(l.anio)}</span>${l.url ? ` · <a href="${esc(l.url)}" target="_blank" rel="noopener nofollow">Ver anuncio</a>` : ""}</span><b class="mono">${mxn(Math.round(l.precio))}</b></li>`).join("");
+  const mas = r.listados && r.listados.length > 12 ? `<p class="cmp-foot">Y ${r.listados.length - 12} anuncios más.</p>` : "";
+  document.getElementById("cqRes").innerHTML = `
+    <div class="cmp-res" role="status">
+      <div class="cmp-head"><span class="cmp-tag ${esc(r.estado)}">${esc(r.mensaje)}</span><p>${frase}</p></div>
+      <dl class="cmp-nums">
+        <div><dt>Tu precio</dt><dd>${mxn(Math.round(r.precio_vendedor))}</dd></div>
+        <div><dt>Mediana del mercado</dt><dd>${mxn(Math.round(r.referencia))}</dd></div>
+        <div class="sug"><dt>Precio sugerido</dt><dd>${mxn(r.precio_sugerido)}</dd></div>
+      </dl>
+      <p>Encontramos <b>${r.anuncios} anuncios</b> de ${esc(v.marca)} ${esc(v.modelo)} de ${anios} en Mercado Libre:</p>
+      <ul class="cmp-list">${lista}</ul>${mas}
+      <p class="cmp-foot">El precio sugerido es la mediana de esos anuncios: la mitad cuesta más y la mitad menos. Es una referencia; el precio final lo definimos contigo después de la verificación de entrada.</p>
+      <a class="btn btn-ghost" href="#contacto" id="cqSeguir">Quiero vender con AlumniCar</a>
+    </div>`;
+}
+document.getElementById("cmpPub").addEventListener("submit", async e => {
+  e.preventDefault();
+  const v = {}; CQ_CAMPOS.forEach(k => { v[k] = document.getElementById("cq-" + k).value.trim(); });
+  const foco = k => document.getElementById("cq-" + k).focus();
+  if (!v.nombre) { cqMsg("Escribe tu nombre."); foco("nombre"); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.correo)) { cqMsg("Revisa tu email: debe verse como nombre@correo.com."); foco("correo"); return; }
+  if (!v.marca || !v.modelo || !/^\d{4}$/.test(v.anio) || !/^[\d,\s]+$/.test(v.kilometraje)) { cqMsg("Revisa marca, modelo, año y kilometraje."); foco(!v.marca ? "marca" : !v.modelo ? "modelo" : !/^\d{4}$/.test(v.anio) ? "anio" : "kilometraje"); return; }
+  if (!precioValido(v.precio_vendedor)) { cqMsg("Revisa el precio: escribe solo números mayores a cero, por ejemplo 350000."); foco("precio_vendedor"); return; }
+  if (!sb) { cqMsg("El comparador todavía no está conectado. Escríbenos y te ayudamos con el precio."); return; }
+  const btn = document.getElementById("cqBtn");
+  btn.disabled = true; btn.textContent = "Buscando en Mercado Libre…";
+  cqMsg("Estamos buscando anuncios parecidos. Puede tardar hasta un minuto.", false);
+  let r = CQ_SIN_RESPUESTA;
+  try {
+    const { data, error } = await sb.functions.invoke("comparar-precio", { body: v });
+    if (!error && data && data.mensaje) r = data;
+    else if (error && error.context && typeof error.context.json === "function") {
+      const d = await error.context.json().catch(() => null); // p. ej. el límite de 3 al día (429)
+      if (d && d.mensaje) r = d;
+    }
+  } catch {}
+  btn.disabled = false; btn.textContent = "Comparar con el mercado";
+  cqPintar(r, v);
+});
+document.getElementById("cqRes").addEventListener("click", e => {
+  if (!e.target.closest("#cqSeguir")) return;
+  document.getElementById("i-sell").checked = true; syncIntent();
+  const g = id => document.getElementById(id);
+  if (!g("f-name").value) g("f-name").value = g("cq-nombre").value.trim();
+  if (!g("f-mail").value) g("f-mail").value = g("cq-correo").value.trim();
+  if (!g("f-msg").value) g("f-msg").value = `${g("cq-marca").value.trim()} ${g("cq-modelo").value.trim()} ${g("cq-anio").value.trim()}, ${g("cq-kilometraje").value.trim()} km. Precio que quiero: $${g("cq-precio_vendedor").value.trim()}.`;
+});
 syncIntent();
 document.getElementById("budget").value = priceToPos(550000);
 setGauge(550000);

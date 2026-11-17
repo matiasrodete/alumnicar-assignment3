@@ -6,10 +6,16 @@ export const ACTOR_APIFY = "sourabhbgp~mercadolibre-scraper";
 export const CATEGORIA_AUTOS_MX = "MLM1744"; // Mercado Libre México › Autos y Camionetas
 export const MIN_ANUNCIOS = 3;
 export const PRECIO_MINIMO_ANUNCIO = 10000; // descarta refacciones/accesorios que se cuelan en la búsqueda
+export const RANGO_ANIOS = 1;      // compara contra el mismo año, uno antes y uno después
+export const MAX_ANUNCIOS_APIFY = 80;
+export const MAX_COMPARACIONES_CORREO = 3; // por correo cada 24 h (cada consulta gasta créditos de Apify)
+export const MAX_COMPARACIONES_IP = 10;    // por conexión cada 24 h
 
 export const MENSAJES = {
   precio_invalido: "Revisa el precio del vendedor: escribe solo números mayores a cero, por ejemplo 350000.",
   datos_invalidos: "Revisa marca, modelo, año y kilometraje.",
+  contacto_invalido: "Escribe tu nombre y un correo válido para comparar tu precio.",
+  limite: "Ya hiciste 3 comparaciones hoy con este correo. Intenta mañana o escríbenos y te ayudamos con el precio.",
   pocos_datos: "Pocos datos para comparar",
   sin_respuesta: "No se pudo consultar el precio, intenta más tarde",
   arriba: "Por encima del mercado",
@@ -38,39 +44,62 @@ export function validarDatos({ marca, modelo, anio, kilometraje }) {
   return ok ? { marca: m, modelo: mo, anio: a, kilometraje: Number(kmTxt) } : null;
 }
 
-// Entrada del actor de Apify para buscar autos usados en Mercado Libre México
-export function entradaApify({ marca, modelo, anio }) {
+// Nombre y correo de quien compara desde la página pública (Vende tu coche).
+export function validarContacto({ nombre, correo }) {
+  const n = String(nombre ?? "").trim(), c = String(correo ?? "").trim().toLowerCase();
+  const ok = n.length > 0 && n.length <= 120 && c.length <= 200 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(c);
+  return ok ? { nombre: n, correo: c } : null;
+}
+
+// Entrada del actor de Apify para buscar autos usados en Mercado Libre México.
+// Busca solo marca + modelo (sin año) para poder traer el año pedido, uno antes y uno después.
+export function entradaApify({ marca, modelo }) {
   return {
     mode: "search",
     country: "MX",
-    searchQuery: `${marca} ${modelo} ${anio}`,
+    searchQuery: `${marca} ${modelo}`,
     categoryId: CATEGORIA_AUTOS_MX,
     condition: "any",
-    maxItems: 40,
+    maxItems: MAX_ANUNCIOS_APIFY,
     scrapeProductDetails: false,
     includeSponsored: false,
   };
 }
 
-// De los anuncios que regresa Apify, toma el precio de cada uno que sea del año pedido.
-// Si el título trae otro año (p. ej. "Mazda 3 2019" cuando se busca 2021) se descarta.
-export function extraerPrecios(anuncios, anio) {
+// Año del anuncio: primero los datos estructurados que traiga Apify; si no, el año en el título.
+// Si el título trae varios años (p. ej. "2019 2020") o ninguno, no se puede saber → null.
+export function anioDeAnuncio(a) {
+  const directo = Number(a.year ?? a.vehicleYear ?? a.anio);
+  if (Number.isInteger(directo) && directo >= 1950) return directo;
+  if (Array.isArray(a.attributes)) {
+    const at = a.attributes.find(x => x && (x.id === "VEHICLE_YEAR" || /^a(ñ|n)o$/i.test(String(x.name ?? ""))));
+    const v = Number(at?.value_name ?? at?.value);
+    if (Number.isInteger(v) && v >= 1950) return v;
+  }
+  const anios = [...new Set(String(a.title ?? "").match(/\b(19[5-9]\d|20\d\d)\b/g) || [])];
+  return anios.length === 1 ? Number(anios[0]) : null;
+}
+
+// De los anuncios que regresa Apify, se queda con los que sirven para comparar:
+// en MXN, del año pedido ±1, sin repetidos y con precio de coche (no de refacción).
+export function extraerAnuncios(anuncios, anio) {
   if (!Array.isArray(anuncios)) return [];
   const vistos = new Set();
-  const precios = [];
+  const lista = [];
   for (const a of anuncios) {
     if (!a || typeof a !== "object") continue;
     const precio = typeof a.price === "number" ? a.price : validarPrecio(a.price);
     if (!precio || precio < PRECIO_MINIMO_ANUNCIO) continue;
     if (a.currency && a.currency !== "MXN") continue;
-    const anios = String(a.title ?? "").match(/\b(19[5-9]\d|20\d\d)\b/g) || [];
-    if (anios.length && !anios.includes(String(anio))) continue;
+    const anioA = anioDeAnuncio(a);
+    if (anioA === null || Math.abs(anioA - anio) > RANGO_ANIOS) continue;
     const id = a.itemId || a.url || null; // evita contar dos veces el mismo anuncio
     if (id) { if (vistos.has(id)) continue; vistos.add(id); }
-    precios.push(precio);
+    lista.push({ titulo: String(a.title ?? "").slice(0, 140), anio: anioA, precio, url: /^https:\/\/[^\s]+$/.test(a.url ?? "") ? a.url : null });
   }
-  return precios;
+  return lista.sort((x, y) => x.precio - y.precio);
 }
+export const extraerPrecios = (anuncios, anio) => extraerAnuncios(anuncios, anio).map(a => a.precio);
 
 export function mediana(valores) {
   const v = [...valores].sort((x, y) => x - y);
@@ -84,9 +113,10 @@ export function veredicto(precioVendedor, referencia) {
   const p = Math.round(precioVendedor * 100);
   const r = Math.round(referencia * 100);
   const diferencia = Math.abs(p - r) / 100;
-  if ((p - r) * 10 > r) return { estado: "arriba", mensaje: MENSAJES.arriba, diferencia };
-  if ((r - p) * 10 > r) return { estado: "abajo", mensaje: MENSAJES.abajo, diferencia };
-  return { estado: "en_linea", mensaje: MENSAJES.en_linea, diferencia };
+  const porcentaje = Math.round(((p - r) / r) * 1000) / 10; // con signo, 1 decimal: +12.5 = 12.5% arriba
+  if ((p - r) * 10 > r) return { estado: "arriba", mensaje: MENSAJES.arriba, diferencia, porcentaje };
+  if ((r - p) * 10 > r) return { estado: "abajo", mensaje: MENSAJES.abajo, diferencia, porcentaje };
+  return { estado: "en_linea", mensaje: MENSAJES.en_linea, diferencia, porcentaje };
 }
 
 // Orquesta todo. `consultarApify(input)` regresa el arreglo de anuncios o lanza un error.
@@ -104,10 +134,15 @@ export async function compararPrecio(body, consultarApify) {
   }
   if (!Array.isArray(anuncios)) return { estado: "sin_respuesta", mensaje: MENSAJES.sin_respuesta };
 
-  const precios = extraerPrecios(anuncios, datos.anio);
-  if (precios.length < MIN_ANUNCIOS) {
-    return { estado: "pocos_datos", mensaje: MENSAJES.pocos_datos, anuncios: precios.length };
+  const lista = extraerAnuncios(anuncios, datos.anio);
+  if (lista.length < MIN_ANUNCIOS) {
+    return { estado: "pocos_datos", mensaje: MENSAJES.pocos_datos, anuncios: lista.length, listados: lista };
   }
-  const referencia = mediana(precios);
-  return { ...veredicto(precio, referencia), precio_vendedor: precio, referencia, anuncios: precios.length };
+  const referencia = mediana(lista.map(a => a.precio));
+  return {
+    ...veredicto(precio, referencia), precio_vendedor: precio, referencia,
+    precio_sugerido: Math.round(referencia / 1000) * 1000, // la mediana, redondeada a miles
+    anios: [datos.anio - RANGO_ANIOS, datos.anio + RANGO_ANIOS],
+    anuncios: lista.length, listados: lista,
+  };
 }
