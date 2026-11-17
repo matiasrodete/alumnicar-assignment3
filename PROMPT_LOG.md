@@ -67,7 +67,21 @@ Lo demás no cambia: mediana, ±10% (el 10% exacto es "En línea"), mínimo 3 an
 - **Decisión:** Pido revisión. Acepto el filtro de moneda y **cambio el año: el mismo, uno antes y uno después**.
 - **Por qué:** Con un solo año hay pocos anuncios. Con ±1 año hay más puntos de comparación y el coche sigue siendo comparable.
 - **Commit:** `Comparador público en "Vende tu coche", año ±1 y precio sugerido`
-- **Mediana antes y después del filtro:** [pendiente del Prompt 3 con anuncios reales; hace falta el token de Apify]
+- **Revisión con anuncios reales (Prompt 3, 17 de noviembre):**
+  - **Prompt:** "Con un coche real: marca [BMW], modelo [235], año [2015], kilometraje [87,000], precio que quiere el vendedor $[420,00]. Corre la búsqueda real en Mercado Libre y muéstrame la lista completa de anuncios que trajo Apify: cuáles entraron en la mediana y cuáles se descartaron y por qué. Dime la mediana con los filtros actuales. No cambies nada todavía: yo reviso la lista y te digo si hay que ajustar algo."
+  - **Qué mostró la IA:** la función no reportaba los descartados, así que agregó un modo revisión que no cambia el resultado (commit `Modo revisión: la función puede reportar los anuncios descartados y su motivo`). Como con "235" solo llegaban 5 anuncios, corrió también "M235i" y "M235i 2015" para tener más qué revisar:
+
+    | Búsqueda | Anuncios de Apify | Mediana sin filtros | Entraron con los filtros de entonces |
+    |---|---|---|---|
+    | BMW 235 | 5 | $1,198,900 | 0 (todos 2025–2027 o sin año) |
+    | BMW M235i | 30 | $729,900 | 0 (24 sin año en el título, 6 de 2024–2026) |
+    | BMW M235i 2015 | 17 | $749,000 | **1, y era un "Bmw Serie 5 2015" a $248,000** |
+
+  - **Hallazgos:** el año casi nunca viene en el título, y Apify solo lo trae si se piden los detalles del anuncio. Un modelo distinto se coló a la mediana porque nadie revisaba que el título dijera el modelo. El M235i 2015 (coupé 3.0) y el M235i Gran Coupé 2020+ (2.0) se mezclarían sin un año confiable. Y el precio "420,00" se leía como $42,000.
+  - **La IA propuso:** A) exigir el modelo en el título; B) pedir los detalles a Apify para leer el año real (unos US$0.20 por consulta en lugar de US$0.09); C) pedir corregir un precio con la coma mal puesta; D) probar también con un coche más común.
+  - **Mi decisión:** **A modificada:** el modelo debe aparecer en el título **o en la descripción**, porque muchos anuncios lo dicen solo en la descripción. **B y C: acepto tal cual. D: rechazo.**
+  - **Commit:** `Prompt 3: modelo en título o descripción, año real del anuncio y coma mal puesta`
+- **Mediana antes y después del filtro (con los cambios, búsqueda real "BMW M235i", 2015):** Apify trajo 16 anuncios. **Mediana sin filtros: $729,900.** Con los filtros entró **1**: un "Bmw Serie 2 3.0 M235ia M Sport At" **2016 a $335,000**, el único de la misma generación. Antes de los cambios se tiraba por no traer el año en el título. Se descartaron 12 por año (2022–2026) y 3 por no mencionar "M235i" en el título ni en la descripción. Con 1 anuncio no hay mediana: "Pocos datos para comparar", que es lo correcto, porque casi no hay M235i 2014–2016 publicados.
 
 ### Entrada 3: dónde aparece la función y quién la usa
 - **Fecha:** 17 de noviembre de 2026
@@ -107,29 +121,26 @@ Lo demás no cambia: mediana, ±10% (el 10% exacto es "En línea"), mínimo 3 an
 
 **Deploy probado:** https://alumnicar-preview.jolly-night-811e.workers.dev — responde: sí — fecha: 17 de noviembre de 2026. La función `comparar-precio` ya está publicada en Supabase con la versión de la rama.
 
-**Pendiente para probar con un coche real:** guardar el token de Apify como secreto `APIFY_TOKEN` en Supabase y crear la tabla `comparaciones` (`supabase/04_comparaciones.sql`). Mientras tanto, la función responde "No se pudo consultar el precio, intenta más tarde", y los Casos 1 y 2 no tienen output real.
+El token de Apify (`APIFY_TOKEN`) está guardado como secreto en Supabase y la tabla `comparaciones` está creada. Las búsquedas de abajo son reales, en Mercado Libre.
 
 ### Caso 1: coche real
-- **Input exacto:** marca: [ ] · modelo: [ ] · año: [ ] · km: [ ] · precio: $[ ]
-- **Output real (copiado tal cual):**
+- **Input exacto:** marca: BMW · modelo: 235 · año: 2015 · km: 87,000 · precio: $420,000. Lo capturé en "Vende tu coche" de la liga de prueba.
+- **Output real (copiado tal cual de la página):**
 
 ```
-[pendiente: falta el token de Apify y publicar]
+Pocos datos para comparar
 ```
 
-- **Veredicto:** [Aceptar / Rechazar / Revisar]
-- **Razón:** [1-2 líneas que citen algo específico del output]
+- **Lo que hay detrás** (modo revisión de la función, misma búsqueda): Apify trajo 5 anuncios de "BMW 235" y no entró ninguno. Todos son M235 Gran Coupé o Serie 2 de 2025 a 2027, fuera del rango 2014–2016.
+- **Veredicto:** Aceptar.
+- **Razón:** La especificación dice "Menos de 3 anuncios → Pocos datos para comparar, sin comparación", y eso mostró: no inventó una mediana con coches nuevos que cuestan casi tres veces más ($869,900 a $1,246,400). Además, con el mismo coche escrito "420,00", la página respondió "Revisa el precio: escribe solo números mayores a cero, por ejemplo 350000." en lugar de compararlo como $42,000.
 
 ### Caso 2: borde del 10% (precio = mediana × 1.10)
 - **Input exacto:** [mismo coche] · precio: $[mediana × 1.10]
-- **Output real (copiado tal cual):**
-
-```
-[pendiente: falta el token de Apify y publicar]
-```
-
-- **Veredicto:** [Aceptar / Rechazar / Revisar]
-- **Razón:** Según la especificación debe decir "En línea con el mercado".
+- **Output real:** no se puede correr con este coche. Para el BMW 235 2015 no hay mediana real: Mercado Libre no tiene 3 anuncios de 2014 a 2016. Decidí no probar con un coche más común (opción D, rechazada en la Entrada 2).
+- **Evidencia del borde que sí hay:** la misma lógica publicada pasa las pruebas del borde con la mediana de $250,000 de la especificación ($275,000 y $225,000 → "En línea con el mercado"; ver la Entrada 4 y la validación con datos simulados abajo).
+- **Veredicto:** Revisar.
+- **Razón:** Según la especificación debe decir "En línea con el mercado"; falta verlo con una mediana real.
 
 ### Validación previa con datos simulados (no es el deploy)
 
@@ -147,7 +158,7 @@ $399,000 → En línea con el mercado | Tu precio es igual a la mediana del merc
 abc → Revisa el precio: escribe solo números mayores a cero, por ejemplo 350000.
 ```
 
-Con la mediana de $250,000 de mi especificación, los casos dan: $300,000 → Por encima (+$50,000), $260,000 → En línea, $275,000 → En línea, $200,000 → Por debajo (−$50,000), 1 anuncio → Pocos datos para comparar, y "", "0" o "abc" → pide corregir el precio. Pasan las 36 pruebas automáticas (`node --test supabase/functions/comparar-precio/comparar-precio.test.mjs`).
+Con la mediana de $250,000 de mi especificación, los casos dan: $300,000 → Por encima (+$50,000), $260,000 → En línea, $275,000 → En línea, $200,000 → Por debajo (−$50,000), 1 anuncio → Pocos datos para comparar, y "", "0" o "abc" → pide corregir el precio. Pasan las 41 pruebas automáticas (`node --test supabase/functions/comparar-precio/comparar-precio.test.mjs`).
 
 ## Por qué esta función resuelve el problema
 
@@ -158,6 +169,8 @@ Antes, AlumniCar fijaba el precio con el vendedor sin una referencia objetiva: d
 - **Aviso de privacidad:** la versión pública pide nombre y correo, y el aviso de privacidad del sitio todavía es un borrador pendiente de revisión legal. Antes de publicar la función para el público, hay que terminarlo y que lo revise un abogado.
 - **Costo de Apify:** con el plan gratis alcanzan unas 30 comparaciones al mes. Si el comparador público se usa mucho, hay que pagar Apify o traer menos anuncios por consulta.
 - **Kilometraje:** se pide pero no filtra anuncios. Mejora pendiente.
+- **Tiempo de respuesta:** con los detalles de Apify, una búsqueda real tardó entre 29 y 59 segundos. El límite de la función es de unos 100 segundos; si Mercado Libre trae muchos anuncios podría acercarse.
+- **Nombre del modelo:** el vendedor debe escribirlo como se publica en Mercado Libre ("M235i" encuentra más que "235").
 - **El correo no se verifica:** alguien podría usar correos distintos para pasar el límite de 3 al día. El límite de 10 por conexión lo frena, pero no del todo.
 
 ## Uso de IA
