@@ -82,23 +82,31 @@ export function anioDeAnuncio(a) {
 
 // De los anuncios que regresa Apify, se queda con los que sirven para comparar:
 // en MXN, del año pedido ±1, sin repetidos y con precio de coche (no de refacción).
-export function extraerAnuncios(anuncios, anio) {
-  if (!Array.isArray(anuncios)) return [];
+// Revisa cada anuncio y dice si entra o por qué se descarta (para revisar la lista a mano).
+export function clasificarAnuncios(anuncios, anio) {
+  const lista = [], descartados = [];
+  if (!Array.isArray(anuncios)) return { lista, descartados };
   const vistos = new Set();
-  const lista = [];
   for (const a of anuncios) {
     if (!a || typeof a !== "object") continue;
+    const titulo = String(a.title ?? "").slice(0, 140);
+    const url = /^https:\/\/[^\s]+$/.test(a.url ?? "") ? a.url : null;
     const precio = typeof a.price === "number" ? a.price : validarPrecio(a.price);
-    if (!precio || precio < PRECIO_MINIMO_ANUNCIO) continue;
-    if (a.currency && a.currency !== "MXN") continue;
+    const fuera = motivo => descartados.push({ titulo, precio: precio ?? a.price ?? null, anio: anioDeAnuncio(a), motivo, url });
+    if (!precio) { fuera("sin precio"); continue; }
+    if (precio < PRECIO_MINIMO_ANUNCIO) { fuera("precio menor a $10,000 (refacción o enganche)"); continue; }
+    if (a.currency && a.currency !== "MXN") { fuera(`moneda ${a.currency}`); continue; }
     const anioA = anioDeAnuncio(a);
-    if (anioA === null || Math.abs(anioA - anio) > RANGO_ANIOS) continue;
+    if (anioA === null) { fuera("sin año identificable"); continue; }
+    if (Math.abs(anioA - anio) > RANGO_ANIOS) { fuera(`año ${anioA}, fuera de ${anio - RANGO_ANIOS} a ${anio + RANGO_ANIOS}`); continue; }
     const id = a.itemId || a.url || null; // evita contar dos veces el mismo anuncio
-    if (id) { if (vistos.has(id)) continue; vistos.add(id); }
-    lista.push({ titulo: String(a.title ?? "").slice(0, 140), anio: anioA, precio, url: /^https:\/\/[^\s]+$/.test(a.url ?? "") ? a.url : null });
+    if (id) { if (vistos.has(id)) { fuera("repetido"); continue; } vistos.add(id); }
+    lista.push({ titulo, anio: anioA, precio, url });
   }
-  return lista.sort((x, y) => x.precio - y.precio);
+  lista.sort((x, y) => x.precio - y.precio);
+  return { lista, descartados };
 }
+export const extraerAnuncios = (anuncios, anio) => clasificarAnuncios(anuncios, anio).lista;
 export const extraerPrecios = (anuncios, anio) => extraerAnuncios(anuncios, anio).map(a => a.precio);
 
 export function mediana(valores) {
@@ -150,12 +158,15 @@ export async function compararPrecio(body, consultarApify) {
   }
   if (!Array.isArray(anuncios)) return { estado: "sin_respuesta", mensaje: MENSAJES.sin_respuesta };
 
-  const lista = extraerAnuncios(anuncios, datos.anio);
+  const { lista, descartados } = clasificarAnuncios(anuncios, datos.anio);
+  // Modo revisión ({ diagnostico: true }): también regresa los descartados y su motivo. No cambia el resultado.
+  const extra = body?.diagnostico === true ? { recibidos: anuncios.length, descartados } : {};
   if (lista.length < MIN_ANUNCIOS) {
-    return { estado: "pocos_datos", mensaje: MENSAJES.pocos_datos, anuncios: lista.length, listados: lista };
+    return { estado: "pocos_datos", mensaje: MENSAJES.pocos_datos, anuncios: lista.length, listados: lista, ...extra };
   }
   const referencia = mediana(lista.map(a => a.precio));
   return {
+    ...extra,
     ...veredicto(precio, referencia), precio_vendedor: precio, referencia,
     precio_sugerido: Math.round(referencia / 1000) * 1000, // la mediana, redondeada a miles
     anios: [datos.anio - RANGO_ANIOS, datos.anio + RANGO_ANIOS],
