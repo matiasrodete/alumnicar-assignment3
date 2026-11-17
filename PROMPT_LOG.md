@@ -31,14 +31,20 @@
 **Herramienta:** Claude Code
 
 ### Entrada 1: fuente de datos
-- **Fecha:** 4 de noviembre de 2026
-- **Prompt (resumen fiel):** "Quiero agregar a mi app AlumniCar una función de comparación de precio usando Apify para traer anuncios de Mercado Libre. […] Llama a un actor de Apify que busque en Mercado Libre México anuncios de esa marca, modelo y año, y toma el precio de cada uno. […] El token de Apify se lee de una variable de entorno; nunca lo escribas en el código. No cambies nada más de la app. Dime qué archivos tocaste y qué actor de Apify usaste."
-- **Qué propuso la IA:** Usar el actor `sourabhbgp/mercadolibre-scraper` (el de Mercado Libre más usado en la tienda de Apify), en México (`MX`) y en la categoría Autos y Camionetas (`MLM1744`). La llamada a Apify va en una función de Supabase (`comparar-precio`) que lee el token de la variable de entorno `APIFY_TOKEN`.
+- **Fecha:** 17 de noviembre de 2026
+- **Prompt:** "Antes de construir nada más, compárame 3 o 4 fuentes de datos para obtener precios de coches usados en México y compararlos con el precio del vendedor (por ejemplo: Apify con Mercado Libre, la API oficial de Mercado Libre, Kavak, la Guía Autométrica u otra que conozcas). Para cada una dime: de dónde salen los precios, cuánto cuesta, qué tan confiables y actualizados son, qué tan difícil es conectarla y qué riesgos tiene. No escribas código todavía."
+- **Qué propuso la IA:** Comparó 4 fuentes:
+  - **Apify + Mercado Libre:** anuncios en vivo, unos US$0.09–0.17 por consulta (unas 30 al mes con el plan gratis), ya conectada; son precios que se piden, no de venta.
+  - **API oficial de Mercado Libre:** gratis, pero la búsqueda podría estar bloqueada para apps externas desde 2025.
+  - **Kavak:** sin API pública; su cotizador da lo que Kavak pagaría, más bajo que el mercado, y extraerlo puede ir contra sus términos.
+  - **Guía Autométrica:** referencia de la industria, de paga, mensual, sin API pública y con licencia que probablemente no deja mostrar sus precios en la web.
+
+  Recomendó quedarse con Apify + Mercado Libre.
 - **Campo de la especificación en juego:** Qué datos necesita: "Precios de referencia: vienen de Apify".
-- **Mi cuestionamiento:** [Prompt 1 pendiente: comparar fuentes de datos antes de elegir.]
-- **Decisión:** [Acepto / Rechazo / Pido revisión]
-- **Por qué:** [una frase ligada a ese campo]
-- **Commit:** `v1.1: comparador de precio contra Mercado Libre (Apify)`
+- **Mi cuestionamiento:** Pesé el riesgo de que en Mercado Libre se publiquen precios más altos de lo que realmente se vende, contra usar una guía tipo libro azul.
+- **Decisión:** Acepto Apify + Mercado Libre.
+- **Por qué:** Aunque no sean precios de venta, son los precios a los que se están publicando los coches, y cualquier comprador o vendedor saca su referencia y su presupuesto de Mercado Libre; hasta los coches de Kavak se publican ahí.
+- **Commit:** `Bitácora: elijo Apify + Mercado Libre como fuente de precios`
 
 ### Entrada 2: qué anuncios entran en la mediana
 - **Fecha:** 17 de noviembre de 2026
