@@ -79,7 +79,7 @@ Lo demás no cambia: mediana, ±10% (el 10% exacto es "En línea"), mínimo 3 an
 
   - **Hallazgos:** el año casi nunca viene en el título, y Apify solo lo trae si se piden los detalles del anuncio. Un modelo distinto se coló a la mediana porque nadie revisaba que el título dijera el modelo. El M235i 2015 (coupé 3.0) y el M235i Gran Coupé 2020+ (2.0) se mezclarían sin un año confiable. Y el precio "420,00" se leía como $42,000.
   - **La IA propuso:** A) exigir el modelo en el título; B) pedir los detalles a Apify para leer el año real (unos US$0.20 por consulta en lugar de US$0.09); C) pedir corregir un precio con la coma mal puesta; D) probar también con un coche más común.
-  - **Mi decisión:** **A modificada:** el modelo debe aparecer en el título **o en la descripción**, porque muchos anuncios lo dicen solo en la descripción. **B y C: acepto tal cual. D: rechazo.**
+  - **Mi decisión:** **A modificada:** el modelo debe aparecer en el título **o en la descripción**, porque muchos anuncios lo dicen solo en la descripción. **B y C: acepto tal cual. D: rechazo**, porque ya con el token de Apify probé yo mismo en la liga de prueba el ejemplo que trae la página (Mazda 3) y sí dio resultado. El BMW sale con "Pocos datos" por ser un coche con pocas publicaciones, no porque la función falle.
   - **Commit:** `Prompt 3: modelo en título o descripción, año real del anuncio y coma mal puesta`
 - **Mediana antes y después del filtro (con los cambios, búsqueda real "BMW M235i", 2015):** Apify trajo 16 anuncios. **Mediana sin filtros: $729,900.** Con los filtros entró **1**: un "Bmw Serie 2 3.0 M235ia M Sport At" **2016 a $335,000**, el único de la misma generación. Antes de los cambios se tiraba por no traer el año en el título. Se descartaron 12 por año (2022–2026) y 3 por no mencionar "M235i" en el título ni en la descripción. Con 1 anuncio no hay mediana: "Pocos datos para comparar", que es lo correcto, porque casi no hay M235i 2014–2016 publicados.
 
@@ -137,7 +137,8 @@ Pocos datos para comparar
 
 ### Caso 2: borde del 10% (precio = mediana × 1.10)
 - **Input exacto:** [mismo coche] · precio: $[mediana × 1.10]
-- **Output real:** no se puede correr con este coche. Para el BMW 235 2015 no hay mediana real: Mercado Libre no tiene 3 anuncios de 2014 a 2016. Decidí no probar con un coche más común (opción D, rechazada en la Entrada 2).
+- **Output real:** no se puede correr con este coche. Para el BMW 235 2015 no hay mediana real: Mercado Libre no tiene 3 anuncios de 2014 a 2016.
+- **Por qué decidí dejarlo así:** ya con el token de Apify, probé yo mismo en la liga de prueba el ejemplo que trae la página (Mazda 3) y sí me dio resultado con anuncios reales. Entiendo que el BMW sale con "Pocos datos" porque es un coche con pocas publicaciones, y sé que con coches más comunes la función sí está funcionando. Por eso no corrí un segundo coche para este caso (opción D, rechazada en la Entrada 2). Esa prueba no la copié tal cual, así que no la cuento como el output de este caso.
 - **Evidencia del borde que sí hay:** la misma lógica publicada pasa las pruebas del borde con la mediana de $250,000 de la especificación ($275,000 y $225,000 → "En línea con el mercado"; ver la Entrada 4 y la validación con datos simulados abajo).
 - **Veredicto:** Revisar.
 - **Razón:** Según la especificación debe decir "En línea con el mercado"; falta verlo con una mediana real.
