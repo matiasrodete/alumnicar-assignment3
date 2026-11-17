@@ -68,14 +68,28 @@
 - **Commit:** `Comparador público en "Vende tu coche", año ±1 y precio sugerido`
 
 ### Entrada 4: el borde del ±10%
-- **Fecha:** [fecha del Prompt 4]
-- **Prompt (resumen fiel):** [Prompt 4 pendiente]
-- **Qué propuso la IA:** La comparación se hace con números enteros (centavos) para que el +10% y el −10% exactos no fallen por redondeo. Al probar en el navegador apareció un detalle: con $438,901 contra una mediana de $399,000, la etiqueta decía "Por encima del mercado" pero el porcentaje redondeado decía "10.0 %". Lo cambió a "poco más del 10 %".
+- **Fecha:** 17 de noviembre de 2026
+- **Prompt:** "Revisemos la línea del ±10% contra mi especificación. Con una mediana de $250,000, muéstrame qué responde la función, tal cual, para estos precios: $274,999, $275,000, $275,001, $225,000 y $224,999. Según mi especificación, exactamente +10% ($275,000) y exactamente −10% ($225,000) deben decir "En línea con el mercado". Explícame cómo calculas el porcentaje y si el redondeo puede cambiar el resultado. Si algo no cumple, dime qué cambiarías antes de tocar el código."
+- **Qué propuso la IA:** Corrió los 5 precios con la función real:
+
+  ```
+  $274,999 {"estado":"en_linea","mensaje":"En línea con el mercado","diferencia":24999,"porcentaje":10, …}
+  $275,000 {"estado":"en_linea","mensaje":"En línea con el mercado","diferencia":25000,"porcentaje":10, …}
+  $275,001 {"estado":"arriba","mensaje":"Por encima del mercado","diferencia":25001,"porcentaje":10, …}
+  $225,000 {"estado":"en_linea","mensaje":"En línea con el mercado","diferencia":25000,"porcentaje":-10, …}
+  $224,999 {"estado":"abajo","mensaje":"Por debajo del mercado","diferencia":25001,"porcentaje":-10, …}
+  ```
+
+  Explicó que la etiqueta se decide con números enteros y sin dividir, así que el redondeo no la cambia. Señaló un problema en cómo se muestra: el porcentaje redondeado dice "10" en los cinco casos, y el mensaje que le llega al equipo diría "Por encima del mercado (+10%…)" para $275,001. Propuso usar la misma frase que la página ("poco más del 10 %") y agregar una prueba.
 - **Campo de la especificación en juego:** Cómo se sabrá que funciona: "$275,000 (exactamente +10%) → En línea con el mercado".
-- **Mi cuestionamiento:** [qué le pregunté o le pedí revisar antes de aceptar]
-- **Decisión:** [Acepto / Rechazo / Pido revisión]
-- **Por qué:** [una frase ligada a ese campo]
-- **Commit:** `Comparador público en "Vende tu coche", año ±1 y precio sugerido`
+- **Mi cuestionamiento:** Aunque la IA dijo que el redondeo no cambia el resultado, pedí más profundidad: siempre puede haber un caso que no estamos planeando, y quiero limitar esos casos por más insignificantes que sean.
+- **Decisión:** Acepto la regla del ±10% y pido el cambio, con más profundidad. Al revisar más casos, la IA encontró y corrigió dos más:
+  - Una diferencia de $10 se veía como "igual a la mediana". Ahora dice "menos del 0.1 % arriba".
+  - Si la mediana sale del promedio de dos anuncios con centavos, puede traer medio centavo. Ahora la comparación se hace en milésimas de peso para no redondearla.
+
+  También agregó 7 pruebas del borde, incluida una que revisa cada peso entre $220,000 y $280,000. Son 36 en total y todas pasan.
+- **Por qué:** La especificación pide que el 10% exacto sea "En línea". Además, el porcentaje que ven el vendedor y el equipo nunca debe contradecir la etiqueta.
+- **Commit:** `Borde del ±10%: el texto del porcentaje nunca contradice la etiqueta`
 
 ## Paso 3 — Validación contra la especificación
 
@@ -113,11 +127,15 @@ Probé la página en mi computadora con la función real, pero con 10 anuncios i
 $450,000 → Por encima del mercado | Tu precio está 12.8 % arriba de la mediana del mercado ($51,000 de diferencia). | Precio sugerido $399,000
 $438,900 (exactamente +10%) → En línea con el mercado | Tu precio está 10.0 % arriba de la mediana del mercado ($39,900 de diferencia).
 $438,901 → Por encima del mercado | Tu precio está poco más del 10 % arriba de la mediana del mercado ($39,901 de diferencia).
+$359,100 (exactamente −10%) → En línea con el mercado | Tu precio está 10.0 % abajo de la mediana del mercado ($39,900 de diferencia).
+$359,099 → Por debajo del mercado | Tu precio está poco más del 10 % abajo de la mediana del mercado ($39,901 de diferencia).
+$399,010 → En línea con el mercado | Tu precio está menos del 0.1 % arriba de la mediana del mercado ($10 de diferencia).
+$399,000 → En línea con el mercado | Tu precio es igual a la mediana del mercado.
 4.ª comparación con el mismo correo → Ya hiciste 3 comparaciones hoy con este correo. Intenta mañana o escríbenos y te ayudamos con el precio.
 abc → Revisa el precio: escribe solo números mayores a cero, por ejemplo 350000.
 ```
 
-Con la mediana de $250,000 de mi especificación, los casos dan: $300,000 → Por encima (+$50,000), $260,000 → En línea, $275,000 → En línea, $200,000 → Por debajo (−$50,000), 1 anuncio → Pocos datos para comparar, y "", "0" o "abc" → pide corregir el precio. Pasan las 29 pruebas automáticas (`node --test supabase/functions/comparar-precio/comparar-precio.test.mjs`).
+Con la mediana de $250,000 de mi especificación, los casos dan: $300,000 → Por encima (+$50,000), $260,000 → En línea, $275,000 → En línea, $200,000 → Por debajo (−$50,000), 1 anuncio → Pocos datos para comparar, y "", "0" o "abc" → pide corregir el precio. Pasan las 36 pruebas automáticas (`node --test supabase/functions/comparar-precio/comparar-precio.test.mjs`).
 
 ## Por qué esta función resuelve el problema
 
