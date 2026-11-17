@@ -1,6 +1,9 @@
 # Bitácora de prompts (PROMPT_LOG) — Assignment 2 · AlumniCar
 
-**Deploy:** https://alumnicar.com — sitio publicado (v1.0, en Cloudflare, no en Vercel). La función de comparación **todavía no está publicada** en la web.
+**Deploy (liga de prueba con la función):** https://alumnicar-preview.jolly-night-811e.workers.dev — rama `comparacion-precio` en Cloudflare.
+**Sitio oficial:** https://alumnicar.com — sigue en la v1.0, sin la función.
+
+> **Por qué Cloudflare y por qué una liga aparte:** el sitio está en Cloudflare porque el plan gratis de Vercel no permite uso comercial. La función pública pide nombre y correo, y el aviso de privacidad y los términos del sitio todavía no los revisa un abogado. Para no exponer a AlumniCar a un problema legal, la función se prueba en una liga aparte: no aparece en buscadores, lleva un aviso de "versión de prueba" y no está en alumnicar.com. Pasa a `main` hasta tener la revisión legal.
 **Repositorio:** https://github.com/matiasrodete/alumnicar-web — rama de trabajo `comparacion-precio`.
 **Función:** comparación del precio del vendedor contra el mercado (Mercado Libre vía Apify).
 
@@ -102,9 +105,9 @@ Lo demás no cambia: mediana, ±10% (el 10% exacto es "En línea"), mínimo 3 an
 
 ## Paso 3 — Validación contra la especificación
 
-**Deploy probado:** https://alumnicar.com — responde: sí — fecha: 17 de noviembre de 2026. La versión publicada todavía **no** tiene el comparador.
+**Deploy probado:** https://alumnicar-preview.jolly-night-811e.workers.dev — responde: sí — fecha: 17 de noviembre de 2026. La función `comparar-precio` ya está publicada en Supabase con la versión de la rama.
 
-**Pendiente para probar con un coche real:** guardar el token de Apify como secreto `APIFY_TOKEN` en Supabase, crear la tabla `comparaciones` (`supabase/04_comparaciones.sql`), publicar la función y publicar la página. Mientras tanto, los Casos 1 y 2 no tienen output real.
+**Pendiente para probar con un coche real:** guardar el token de Apify como secreto `APIFY_TOKEN` en Supabase y crear la tabla `comparaciones` (`supabase/04_comparaciones.sql`). Mientras tanto, la función responde "No se pudo consultar el precio, intenta más tarde", y los Casos 1 y 2 no tienen output real.
 
 ### Caso 1: coche real
 - **Input exacto:** marca: [ ] · modelo: [ ] · año: [ ] · km: [ ] · precio: $[ ]
