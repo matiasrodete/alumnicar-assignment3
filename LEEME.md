@@ -85,3 +85,13 @@ La carpeta `supabase/` y este LEEME no se publican (lo indica el archivo `.verce
 - El plan gratuito de Supabase **pausa el proyecto tras una semana sin visitas**; con tráfico normal no pasa. Revisa los límites y precios actuales en su página.
 - Al quitar una foto de una publicación (sin borrar el coche), el archivo sigue guardado en Storage. Si llegas al límite de espacio, bórralos en **Storage → car-photos**.
 - El formulario tiene una protección simple contra spam. Si empiezan a llegar mensajes basura, se puede agregar un captcha.
+
+## Seguridad: registro cerrado (25 nov)
+
+En la página de ingresar **nadie puede crear cuentas nuevas**. Solo existen las cuentas de administrador.
+- Se cerró en Supabase → Authentication → "Allow new users to sign up" (apagado).
+- Motivo: el 12 de noviembre apareció una cuenta creada con un correo desechable (`@mail.tm`), sin confirmar.
+  No podía hacer nada porque no era administradora, pero no hay razón para dejar el registro abierto:
+  si algún día una regla de seguridad se escribe mal, cualquier cuenta podría entrar. Esa cuenta se borró.
+- Para agregar otro administrador: créalo a mano en Authentication → Users → Add user, y luego corre
+  `supabase/03_agregar_admin.sql`.
