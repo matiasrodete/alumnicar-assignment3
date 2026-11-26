@@ -5,9 +5,11 @@ Es una página estática (`index.html` + `config.js`). Supabase guarda la base d
 
 | | Liga | Qué tiene |
 |---|---|---|
-| **Versión final (Assignment 3)** | **https://alumnicar-preview.jolly-night-811e.workers.dev** | Todo: catálogo, quiz, comparador de precio, contacto y panel de administración. Rama `comparacion-precio`. |
+| **Versión final (Assignment 3)** | **https://alumnicar-preview.jolly-night-811e.workers.dev** | Todo: catálogo, quiz, comparador de precio, contacto y panel de administración. |
 | Sitio oficial | https://alumnicar.com | v1.0 (rama `main`), sin el comparador. |
 
+> **Este repositorio** es la entrega del Assignment 3. Tiene el historial completo de commits desde el sitio v1.0 (Assignment 1), pasando por el comparador (Assignment 2), hasta el producto final. Viene de la rama `comparacion-precio` de [alumnicar-web](https://github.com/matiasrodete/alumnicar-web), donde `main` sigue siendo la v1.0 publicada en alumnicar.com.
+>
 > **Por qué una liga de prueba y no alumnicar.com:** el comparador pide nombre y correo, y el aviso de privacidad todavía no lo revisa un abogado. Además, todo corre en planes gratuitos (Cloudflare, Supabase, Apify) hasta que AlumniCar sea un negocio rentable. La liga de prueba no aparece en buscadores y avisa que es una versión de prueba. Ver la decisión 4.
 >
 > **Catálogo de muestra:** los 53 coches son ejemplos (cada uno dice "Coche de muestra"). Sirven para que la app se pueda usar de principio a fin.
