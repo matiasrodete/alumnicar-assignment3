@@ -42,6 +42,7 @@ IS = sistema inteligente (Claude, en Claude Code y en el chat). **Este README lo
 - **Qué propuso el IS:** un botón del comparador solo dentro del panel de administración, porque cada consulta gasta créditos de Apify.
 - **Qué decidí:** quería que lo usara el **vendedor** en "Vende tu coche", con los anuncios encontrados, el porcentaje arriba o abajo y un precio sugerido. Cuando el IS me avisó que eso chocaba con "solo administradores", elegí **público con datos**: nombre y correo, máximo 3 comparaciones al día por correo y 10 por conexión, y cada vendedor nos llega como contacto.
 - **Por qué:** el vendedor es quien necesita la referencia al decidir su precio. Pedir el correo cuida el gasto de Apify y deja un contacto para AlumniCar.
+- **Verificación:** lo probé yo en la liga de prueba como vendedor (Caso 1 con mi BMW 235 y la prueba del Mazda 3). La primera comparación del día de cada correo llegó como contacto "vender" a la tabla de contactos (por ejemplo, "Prueba Caso 1"). El límite de 3 al día por correo y de 10 por conexión está cubierto por pruebas automáticas (responde 429 sin gastar Apify).
 - **Commit:** `Comparador público en "Vende tu coche", año ±1 y precio sugerido`
 
 ### 3. Funcionalidad: qué anuncios entran en la mediana (17 nov) · **Reviso: acepto 2, modifico 1 y rechazo 1**
