@@ -610,6 +610,52 @@ mark.fill{background:#FFE98A;color:#3D3000;padding:1px 4px;border-radius:4px}
 .cmp-list .y{color:var(--muted);font-size:13px}
 .cmp-list a{font-size:13px}
 .cmp-foot{color:var(--muted);font-size:13px}
+
+/* ===== Assignment 3 · rediseño: más dinámico (inspirado en el estilo de Apple/Revolut, sin copiar marca) =====
+   Un solo momento orquestado (entrada del hero) + una escena de scroll (la banda oscura) + movimiento que
+   responde a acciones. "Reducir movimiento" lo apaga todo (regla global de arriba) y nada queda oculto. */
+:root{--night:#101B28; --night-2:#18263A; --ease-out:cubic-bezier(.2,.7,.2,1)}
+header.nav{background:color-mix(in srgb,var(--ground) 72%,transparent);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px)}
+.btn:active{transform:scale(.97);transition-duration:.08s}
+.hero{padding-block:72px 88px}
+.hero h1{font-size:clamp(44px,7.2vw,96px);letter-spacing:-.04em;line-height:1}
+.hero .lede{font-size:clamp(17px,1.5vw,20px)}
+/* entrada del hero: 0 a ~0.9 s, de arriba hacia abajo */
+@keyframes acRise{from{opacity:0;transform:translateY(22px)}}
+@keyframes acPop{from{opacity:0;transform:translateY(28px) scale(.97)}}
+@keyframes acNeedle{from{transform:rotate(180deg)}}
+.hero .eyebrow{animation:acRise .6s var(--ease-out) both}
+.hero h1{animation:acRise .7s var(--ease-out) .06s both}
+.hero .lede{animation:acRise .7s var(--ease-out) .16s both}
+.hero .ctas{animation:acRise .7s var(--ease-out) .24s both}
+.hero .facts{animation:acRise .7s var(--ease-out) .32s both}
+.hero .gauge-card{animation:acPop .8s var(--ease-out) .1s both;box-shadow:0 40px 80px -40px rgba(16,27,40,.55)}
+#needleG.ac-intro{animation:acNeedle .9s var(--ease-out) .35s both}
+/* banda oscura: escena de scroll */
+.show{background:var(--night);color:var(--on-brand);overflow:hidden;position:relative;padding-block:clamp(72px,10vw,128px) clamp(56px,7vw,88px)}
+.show::before{content:"";position:absolute;inset:auto -10% -40% -10%;height:70%;background:radial-gradient(60% 60% at 50% 0%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%);pointer-events:none}
+.show .wrap{position:relative}
+.show-kicker{font:600 15px/1.2 var(--body);color:var(--accent);margin:0 0 18px}
+.show-title{font-size:clamp(44px,8vw,112px);font-weight:800;letter-spacing:-.045em;line-height:.95;color:#fff}
+.show-title span{color:var(--on-brand-muted)}
+.show-lede{max-width:34em;margin-top:24px;font-size:clamp(16px,1.4vw,19px);color:var(--on-brand-muted)}
+.show-range{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;margin-top:44px;max-width:760px}
+.show-range b{font:700 clamp(20px,2.4vw,30px)/1 var(--mono);color:#fff}
+.show-range small{display:block;font:500 12px/1.4 var(--body);color:var(--on-brand-muted);margin-top:6px;letter-spacing:.02em}
+.show-line{height:2px;border-radius:2px;background:linear-gradient(90deg,var(--on-brand-muted),var(--accent))}
+.show-road{position:relative;height:clamp(90px,12vw,150px);margin-top:36px;border-bottom:1px dashed color-mix(in srgb,var(--on-brand-muted) 45%,transparent)}
+.show-car{position:absolute;bottom:-2px;left:0;width:clamp(180px,22vw,300px);height:auto;color:var(--accent);filter:drop-shadow(0 18px 24px rgba(0,0,0,.45))}
+@supports (animation-timeline: view()){
+  @keyframes acDrive{from{transform:translateX(-30%)}to{transform:translateX(calc(min(1160px,100vw) - 70%))}}
+  .show-car{animation:acDrive linear both;animation-timeline:view();animation-range:entry 10% exit 60%}
+}
+.show-rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(260px,300px);gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;padding:40px clamp(16px,4vw,32px) 12px;margin-inline:calc(-1 * clamp(16px,4vw,32px));scrollbar-width:thin;scrollbar-color:var(--on-brand-muted) transparent}
+.show-rail .car{scroll-snap-align:start;border-color:transparent;color:var(--ink)}
+.show-rail:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+.show-foot{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:28px}
+.show-foot p{margin:0;color:var(--on-brand-muted)}
+.show .btn-ghost{color:#fff;border-color:color-mix(in srgb,#fff 40%,transparent)}
+@media (max-width:640px){.show-range{grid-template-columns:1fr;gap:10px}.show-line{width:100%}}
 </style>
 </head>
 <body>
@@ -737,7 +783,7 @@ mark.fill{background:#FFE98A;color:#3D3000;padding:1px 4px;border-radius:4px}
           <path id="gTrack" class="track" d="M35.0 160.0 A115 115 0 0 1 265.0 160.0"/>
           <path id="gFill" class="fill" d="M35.0 160.0 A115 115 0 0 1 195.2 54.3"/>
           <g id="gTicks"><line class="tick" x1="56.6" y1="116.5" x2="65.7" y2="120.8"/><text class="tlabel" x="24" y="105.4" text-anchor="middle">250k</text><line class="tick" x1="102.6" y1="68.6" x2="107.2" y2="77.4"/><text class="tlabel" x="86" y="40.6" text-anchor="middle">350k</text><line class="tick" x1="172.3" y1="59.4" x2="170.1" y2="69.2"/><text class="tlabel" x="180" y="28.3" text-anchor="middle">500k</text><line class="tick" x1="229" y1="93.9" x2="221.4" y2="100.4"/><text class="tlabel" x="256.7" y="74.9" text-anchor="middle">700k</text><line class="tick" x1="253" y1="160" x2="243" y2="160"/><text class="tlabel" x="289" y="164" text-anchor="middle">1M+</text></g>
-          <g id="needleG" style="transform-origin:150px 160px;transform:rotate(293.1deg)">
+          <g id="needleG" class="ac-intro" style="transform-origin:150px 160px;transform:rotate(293.1deg)">
             <line class="needle" x1="150" y1="160" x2="252" y2="160"/>
           </g>
           <circle class="hub" cx="150" cy="160" r="10"/>
@@ -763,6 +809,23 @@ mark.fill{background:#FFE98A;color:#3D3000;padding:1px 4px;border-radius:4px}
         <span class="qb-text"><b>¿No sabes qué coche comprar?</b><span>Contesta 5 preguntas en menos de un minuto y te recomendamos los coches que mejor te quedan.</span></span>
         <span class="btn btn-ink qb-btn">Hacer el quiz →</span>
       </a>
+    </div>
+  </section>
+
+
+  <section class="show on" data-page="inicio" aria-labelledby="showT">
+    <div class="wrap">
+      <p class="show-kicker" id="shKick">Coches verificados en el poniente de la CDMX</p>
+      <h2 class="show-title" id="showT">Del primero<br><span>al de tus sueños.</span></h2>
+      <p class="show-lede">Desde un sedán para ir a la uni hasta una SUV de lujo: todos pasan las mismas dos verificaciones, legal y mecánica.</p>
+      <div class="show-range" aria-label="Rango de precios del catálogo">
+        <div><b id="shMin">—</b><small>el más accesible</small></div>
+        <span class="show-line" aria-hidden="true"></span>
+        <div style="text-align:right"><b id="shMax">—</b><small>el más premium</small></div>
+      </div>
+      <div class="show-road" aria-hidden="true"><svg class="show-car" viewBox="0 0 200 84"><use href="#sedan"/></svg></div>
+      <div class="show-rail" id="shRail" tabindex="0" aria-label="Coches destacados, desliza para ver más"></div>
+      <div class="show-foot"><p>Desliza para ver más · precios en pesos mexicanos</p><a class="btn btn-accent" href="#coches">Ver todo el catálogo</a></div>
     </div>
   </section>
 
@@ -1523,6 +1586,9 @@ function setGauge(v){
   render();
 }
 document.getElementById("budget").addEventListener("input", e => setGauge(posToPrice(+e.target.value)));
+// Al terminar la entrada, la aguja vuelve a moverse con su transición normal
+document.getElementById("needleG").addEventListener("animationend", e => e.currentTarget.classList.remove("ac-intro"), { once: true });
+if (!sb) renderShowcase();
 document.querySelectorAll(".chips[data-group] .chip").forEach(b => b.addEventListener("click", () => {
   const grp = b.parentElement;
   grp.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", x===b));
@@ -1710,6 +1776,18 @@ const toRow = c => ({
   status:c.status, photos:c.photos || [],
 });
 
+// Banda "Del primero al de tus sueños": 8 coches repartidos de menor a mayor precio, del catálogo real
+function renderShowcase(){
+  const rail = document.getElementById("shRail"); if (!rail) return;
+  const disp = cars.filter(c => c.status === "Disponible").sort((a,b) => a.price - b.price);
+  if (!disp.length) { rail.innerHTML = ""; return; }
+  const n = Math.min(8, disp.length), pick = [];
+  for (let i = 0; i < n; i++) pick.push(disp[Math.round(i * (disp.length - 1) / Math.max(1, n - 1))]);
+  rail.innerHTML = [...new Set(pick)].map(card).join("");
+  document.getElementById("shMin").textContent = mxn(disp[0].price);
+  document.getElementById("shMax").textContent = mxn(disp[disp.length - 1].price);
+  document.getElementById("shKick").textContent = `${disp.length} coches verificados en el poniente de la CDMX`;
+}
 function applyCars(list){
   loading = false;
   list.sort((a,b) => a.ref.localeCompare(b.ref));
@@ -1722,6 +1800,7 @@ function applyCars(list){
   sel.innerHTML = `<option value="">Aún no lo sé</option>` + cars.map(c=>`<option value="${c.ref}">${c.ref} · ${esc(c.make)} ${esc(c.model)} (${c.year})</option>`).join("");
   sel.value = byRef[keep] ? keep : "";
   render();
+  renderShowcase();
   const id = decodeURIComponent(location.hash.slice(1));
   if (/^AC-\d+$/i.test(id) && (!current || current.ref !== id || !byRef[id])) route();
   if (curPage === "admin" && isAdmin && !editing) renderPanel();
