@@ -324,3 +324,80 @@ test("el token va en el encabezado Authorization, no en la URL", async () => {
   assert.ok(visto.url.includes("sourabhbgp~mercadolibre-scraper"));
   assert.equal(visto.body.searchQuery, "Mazda 3");
 });
+
+// --- caché de búsquedas (Assignment 3: cuello de botella = Apify) ---
+import { conCache, claveCache, recortarAnuncio, CACHE_DIAS } from "./logica.mjs";
+function cacheFalsa({ fallaLeer = false, fallaGuardar = false } = {}) {
+  const m = new Map();
+  return {
+    m,
+    async leer(clave, dias) { if (fallaLeer) throw new Error("sin tabla"); assert.equal(dias, CACHE_DIAS); return m.get(clave) ?? null; },
+    async guardar(clave, anuncios) { if (fallaGuardar) throw new Error("sin tabla"); m.set(clave, anuncios); },
+  };
+}
+const apifyContado = (precios = [390000, 400000, 410000]) => {
+  const f = async () => { f.llamadas++; return Response.json(precios.map(p => anuncio(p))); };
+  f.llamadas = 0; return f;
+};
+
+test("caché: la misma búsqueda no vuelve a llamar a Apify y da el mismo resultado", async () => {
+  const cache = cacheFalsa(), fetchFn = apifyContado();
+  const h = crearManejador({ token: "t", esAdmin: async () => true, registro: registroFalso(), cache, fetchFn });
+  const r1 = await (await h(pedir({ ...base, precio_vendedor: "460000" }, { auth: "Bearer a" }))).json();
+  const r2 = await (await h(pedir({ ...base, precio_vendedor: "460000" }, { auth: "Bearer a" }))).json();
+  assert.equal(fetchFn.llamadas, 1);
+  assert.equal(r1.de_cache, false);
+  assert.equal(r2.de_cache, true);
+  assert.equal(r2.referencia, r1.referencia);
+  assert.equal(r2.estado, r1.estado);
+});
+test("caché: otro año del mismo modelo reusa la búsqueda (Apify busca sin año)", async () => {
+  const cache = cacheFalsa(), fetchFn = apifyContado();
+  const h = crearManejador({ token: "t", esAdmin: async () => true, registro: registroFalso(), cache, fetchFn });
+  await h(pedir({ ...base, anio: "2021", precio_vendedor: "400000" }, { auth: "Bearer a" }));
+  await h(pedir({ ...base, anio: "2020", precio_vendedor: "400000" }, { auth: "Bearer a" }));
+  assert.equal(fetchFn.llamadas, 1);
+});
+test("caché: mayúsculas y acentos no cambian la clave; otro modelo sí", () => {
+  assert.equal(claveCache({ searchQuery: "Mazda 3" }), claveCache({ searchQuery: "  MAZDA   3 " }));
+  assert.equal(claveCache({ searchQuery: "Volkswagen Jetta" }), "volkswagen jetta");
+  assert.equal(claveCache({ searchQuery: "Citroën C3" }), "citroen c3");
+  assert.notEqual(claveCache({ searchQuery: "Mazda 3" }), claveCache({ searchQuery: "Mazda CX30" }));
+});
+test("caché: si la tabla falla, compara igual con Apify (la caché nunca rompe la comparación)", async () => {
+  for (const opciones of [{ fallaLeer: true }, { fallaGuardar: true }]) {
+    const fetchFn = apifyContado();
+    const h = crearManejador({ token: "t", esAdmin: async () => true, registro: registroFalso(), cache: cacheFalsa(opciones), fetchFn });
+    const r = await (await h(pedir({ ...base, precio_vendedor: "400000" }, { auth: "Bearer a" }))).json();
+    assert.equal(r.estado, "en_linea");
+    assert.equal(fetchFn.llamadas, 1);
+  }
+});
+test("caché: no guarda búsquedas vacías ni errores de Apify (se reintentan la próxima vez)", async () => {
+  const cache = cacheFalsa();
+  await conCache(async () => [], cache)({ searchQuery: "Bmw 235" });
+  await assert.rejects(conCache(async () => { throw new Error("caído"); }, cache)({ searchQuery: "Mazda 3" }));
+  assert.equal(cache.m.size, 0);
+});
+test("caché: lo guardado es recortado pero da la misma mediana que el anuncio completo", async () => {
+  const completos = [390000, 400000, 410000].map(p => anuncio(p, {
+    title: "Mazda 3 Sedan", description: "x".repeat(10000) + " Mazda 3", pictures: ["a", "b"], seller: { id: 1 },
+    attributes: [{ name: "Año", value: "2021" }, { name: "Color", value: "Rojo" }],
+  }));
+  const recortados = completos.map(recortarAnuncio);
+  assert.ok(JSON.stringify(recortados).length < JSON.stringify(completos).length / 2);
+  const a = await compararPrecio({ ...base, precio_vendedor: "400000" }, async () => completos);
+  const b = await compararPrecio({ ...base, precio_vendedor: "400000" }, async () => recortados);
+  assert.equal(b.referencia, a.referencia);
+  assert.equal(b.anuncios, a.anuncios);
+});
+test("caché: el público también la usa, y el límite de 3 por correo sigue contando", async () => {
+  const cache = cacheFalsa(), fetchFn = apifyContado();
+  const h1 = crearManejador({ token: "t", esAdmin: async () => false, registro: registroFalso(), cache, fetchFn });
+  await h1(pedir({ ...base, ...contacto, precio_vendedor: "400000" }));
+  const r = await (await h1(pedir({ ...base, ...contacto, correo: "otro@correo.com", precio_vendedor: "400000" }))).json();
+  assert.equal(r.de_cache, true);
+  assert.equal(fetchFn.llamadas, 1);
+  const h2 = crearManejador({ token: "t", esAdmin: async () => false, registro: registroFalso({ porCorreo: 3 }), cache, fetchFn });
+  assert.equal((await h2(pedir({ ...base, ...contacto, precio_vendedor: "400000" }))).status, 429);
+});

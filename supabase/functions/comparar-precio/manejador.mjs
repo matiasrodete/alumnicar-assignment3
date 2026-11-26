@@ -2,7 +2,7 @@
 // para poder probarlo con Node). index.ts solo conecta esto con Deno y Supabase.
 import {
   ACTOR_APIFY, MENSAJES, MAX_COMPARACIONES_CORREO, MAX_COMPARACIONES_IP,
-  compararPrecio, validarContacto, validarDatos, validarPrecio,
+  compararPrecio, conCache, validarContacto, validarDatos, validarPrecio,
 } from "./logica.mjs";
 
 const CORS = {
@@ -34,12 +34,13 @@ const pesos = n => "$" + Math.round(n).toLocaleString("es-MX");
 //   token: string|undefined,
 //   esAdmin(authHeader) => Promise<boolean>,
 //   registro: { contar({correo, ip}) => Promise<{correo, ip}>, guardar(fila), crearLead(lead) },
+//   cache?: { leer(clave, dias) => Promise<anuncios|null>, guardar(clave, anuncios) },
 //   fetchFn?
 // }
 // Administradores (panel): sin límite y sin datos de contacto.
 // Público (Vende tu coche): pide nombre y correo; máximo 3 comparaciones por correo y 10 por conexión
 // cada 24 h. La primera comparación del día de cada correo llega al equipo como contacto "vender".
-export function crearManejador({ token, esAdmin, registro, fetchFn = fetch }) {
+export function crearManejador({ token, esAdmin, registro, cache, fetchFn = fetch }) {
   return async (req) => {
     if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
     if (req.method !== "POST") return json({ estado: "error", mensaje: "Método no permitido" }, 405);
@@ -49,11 +50,15 @@ export function crearManejador({ token, esAdmin, registro, fetchFn = fetch }) {
     if (!body || typeof body !== "object") body = {};
 
     // Sin token configurado no se puede consultar: mismo mensaje que si Apify no respondiera
-    const consultar = token ? consultarApifyCon(token, fetchFn) : async () => { throw new Error("Falta APIFY_TOKEN"); };
+    const apify = token ? consultarApifyCon(token, fetchFn) : async () => { throw new Error("Falta APIFY_TOKEN"); };
+    // Caché de 60 días por búsqueda: la misma marca + modelo no vuelve a pagar Apify ni esperar 30-60 s
+    const uso = { deCache: false };
+    const consultar = conCache(apify, cache, uso);
+    const responder = (r, status) => json(r.estado && r.anuncios !== undefined ? { ...r, de_cache: uso.deCache } : r, status);
 
     const auth = req.headers.get("Authorization") || "";
     const admin = auth ? await esAdmin(auth).catch(() => false) : false;
-    if (admin) return json(await compararPrecio(body, consultar));
+    if (admin) return responder(await compararPrecio(body, consultar));
 
     // --- Público ---
     // Precio o datos del coche mal escritos: se responde sin gastar Apify ni contar para el límite
@@ -88,7 +93,7 @@ export function crearManejador({ token, esAdmin, registro, fetchFn = fetch }) {
         message: `Comparó su precio en la web. ${coche}. Precio que quiere: ${pesos(precio)}. Resultado: ${resumen}.`.slice(0, 2000),
       })).catch(() => {});
     }
-    return json(r);
+    return responder(r);
   };
 }
 

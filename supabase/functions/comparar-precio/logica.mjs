@@ -163,6 +163,42 @@ export function veredicto(precioVendedor, referencia) {
   return { estado, mensaje: MENSAJES[estado], diferencia, porcentaje, texto_porcentaje: textoPorcentaje(p, r, estado) };
 }
 
+// --- Caché de búsquedas (Assignment 3: cuello de botella = Apify, ~US$0.20 y 30-60 s por consulta) ---
+// La búsqueda en Apify es solo "marca modelo" (sin año), así que un Mazda 3 2019 y un Mazda 3 2021
+// reusan los mismos anuncios. Se guardan 60 días (decisión del 25 nov: la IA propuso 7; los precios de
+// autos usados bajan ~1 % al mes, muy dentro del ±10 %, y 3 meses ya sería demasiado).
+// Lo que sale de la caché SÍ cuenta para el límite de 3 por correo: no se regalan comparaciones extra.
+export const CACHE_DIAS = 60;
+export const claveCache = input =>
+  String(input?.searchQuery ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+// Solo los campos que usa clasificarAnuncios (para no guardar ~1 MB por búsqueda).
+export const recortarAnuncio = a => ({
+  title: a?.title, price: a?.price, currency: a?.currency, url: a?.url, itemId: a?.itemId,
+  year: a?.year, vehicleYear: a?.vehicleYear, anio: a?.anio,
+  attributes: Array.isArray(a?.attributes)
+    ? a.attributes.filter(x => x && (x.id === "VEHICLE_YEAR" || /^a(ñ|n)o$/i.test(String(x.name ?? "")))) : undefined,
+  description: typeof a?.description === "string" ? a.description.slice(0, 3000) : undefined,
+});
+// Envuelve la consulta a Apify: si la misma búsqueda se hizo hace menos de CACHE_DIAS, usa esos anuncios.
+// Si la caché falla (tabla no existe, error de red), se consulta Apify normal: la caché nunca rompe la comparación.
+// estado.deCache queda en true cuando la respuesta salió de la caché.
+export function conCache(consultar, cache, estado = {}) {
+  if (!cache) return consultar;
+  return async (input) => {
+    const clave = claveCache(input);
+    try {
+      const guardados = await cache.leer(clave, CACHE_DIAS);
+      if (Array.isArray(guardados) && guardados.length) { estado.deCache = true; return guardados; }
+    } catch { /* sin caché: sigue con Apify */ }
+    const anuncios = await consultar(input);
+    if (Array.isArray(anuncios) && anuncios.length) {
+      await Promise.resolve(cache.guardar(clave, anuncios.map(recortarAnuncio))).catch(() => {});
+    }
+    return anuncios;
+  };
+}
+
 // Orquesta todo. `consultarApify(input)` regresa el arreglo de anuncios o lanza un error.
 export async function compararPrecio(body, consultarApify) {
   const precio = validarPrecio(body?.precio_vendedor);

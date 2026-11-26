@@ -43,4 +43,20 @@ const registro = {
   },
 };
 
-Deno.serve(crearManejador({ token: Deno.env.get("APIFY_TOKEN"), esAdmin, registro }));
+// Caché de búsquedas de Apify (tabla busquedas_apify, ver supabase/05_cache_busquedas.sql).
+const cache = {
+  async leer(clave: string, dias: number) {
+    const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await servicio.from("busquedas_apify")
+      .select("anuncios").eq("clave", clave).gte("created_at", desde).maybeSingle();
+    if (error) throw error;
+    return data?.anuncios ?? null;
+  },
+  async guardar(clave: string, anuncios: unknown[]) {
+    const { error } = await servicio.from("busquedas_apify")
+      .upsert({ clave, anuncios, created_at: new Date().toISOString() }, { onConflict: "clave" });
+    if (error) throw error;
+  },
+};
+
+Deno.serve(crearManejador({ token: Deno.env.get("APIFY_TOKEN"), esAdmin, registro, cache }));
