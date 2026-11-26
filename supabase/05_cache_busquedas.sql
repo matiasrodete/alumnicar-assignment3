@@ -1,6 +1,6 @@
 -- AlumniCar · Caché de búsquedas de Apify (Assignment 3, escalabilidad)
 -- Cada búsqueda en Apify cuesta ~US$0.20 y tarda 30-60 s; con el crédito gratis (US$5/mes) alcanza
--- para ~25 comparaciones. Aquí se guardan 60 días los anuncios de cada búsqueda "marca modelo",
+-- para ~25 comparaciones. Aquí se guardan 30 días los anuncios de cada búsqueda "marca modelo",
 -- para que la misma búsqueda no se vuelva a pagar ni a esperar.
 -- Solo la función "comparar-precio" lee y escribe (con la llave de servicio, del lado del servidor).
 create table if not exists public.busquedas_apify (

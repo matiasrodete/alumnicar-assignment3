@@ -51,7 +51,7 @@ export function crearManejador({ token, esAdmin, registro, cache, fetchFn = fetc
 
     // Sin token configurado no se puede consultar: mismo mensaje que si Apify no respondiera
     const apify = token ? consultarApifyCon(token, fetchFn) : async () => { throw new Error("Falta APIFY_TOKEN"); };
-    // Caché de 60 días por búsqueda: la misma marca + modelo no vuelve a pagar Apify ni esperar 30-60 s
+    // Caché de 30 días por búsqueda: la misma marca + modelo no vuelve a pagar Apify ni esperar 30-60 s
     const uso = { deCache: false };
     const consultar = conCache(apify, cache, uso);
     const responder = (r, status) => json(r.estado && r.anuncios !== undefined ? { ...r, de_cache: uso.deCache } : r, status);

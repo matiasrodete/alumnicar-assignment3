@@ -165,10 +165,11 @@ export function veredicto(precioVendedor, referencia) {
 
 // --- Caché de búsquedas (Assignment 3: cuello de botella = Apify, ~US$0.20 y 30-60 s por consulta) ---
 // La búsqueda en Apify es solo "marca modelo" (sin año), así que un Mazda 3 2019 y un Mazda 3 2021
-// reusan los mismos anuncios. Se guardan 60 días (decisión del 25 nov: la IA propuso 7; los precios de
-// autos usados bajan ~1 % al mes, muy dentro del ±10 %, y 3 meses ya sería demasiado).
+// reusan los mismos anuncios. Se guardan 30 días (decisión del 25 nov: la IA propuso 7; primero decidí 60,
+// pero en mi prueba la mediana del Mazda 3 2021 pasó de $319,000 a $299,000 en 8 días porque Apify trae
+// un grupo distinto de anuncios cada vez: una búsqueda "mala" guardada 60 días afectaría a todos 2 meses).
 // Lo que sale de la caché SÍ cuenta para el límite de 3 por correo: no se regalan comparaciones extra.
-export const CACHE_DIAS = 60;
+export const CACHE_DIAS = 30;
 export const claveCache = input =>
   String(input?.searchQuery ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "")
     .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
