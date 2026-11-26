@@ -70,7 +70,8 @@ IS = sistema inteligente (Claude, en Claude Code y en el chat). **Este README lo
 - **Diagnóstico de la Sesión 22:** el cuello de botella es **Apify**. Cada comparación cuesta unos US$0.20 y tarda 30–60 s, y el crédito gratis (US$5 al mes) alcanza para unas 25 comparaciones. Se acaba mucho antes de que Cloudflare o Supabase lleguen a su límite.
 - **Qué propuso el IS:** guardar **7 días** los anuncios de cada búsqueda "marca modelo", para que la misma búsqueda no se vuelva a pagar ni a esperar.
 - **Qué decidí (1.ª vez):** subirlo a **60 días**, porque los precios "no es información que se llega a convertir obsoleta tan rápidamente" (bajan alrededor de 1 % al mes, muy dentro del ±10 %). También decidí que lo que sale de la caché **sí cuenta** para el límite de 3 al día: "el chiste es ahorrar tokens", no regalar más comparaciones.
-- **Verificación propia:** en la liga de prueba, el mismo Mazda 3 tardó **49 s la primera vez y 2 s la segunda**. La caché guardó 24 anuncios en 11 kB. Pero la mediana pasó de **$319,000 (17 nov) a $299,000 (25 nov)**: −6 % en 8 días. No es el mercado: Apify trae un grupo distinto de anuncios en cada búsqueda.
+- **Verificación propia:** en la liga de prueba cronometré el mismo Mazda 3: **49 s la primera vez y 2 s la segunda**. La caché guardó 24 anuncios en 11 kB.
+- **Lo que encontró el IS al revisar mi prueba:** la mediana pasó de **$319,000 (17 nov) a $299,000 (25 nov)**: −6 % en 8 días. No es el mercado: Apify trae un grupo distinto de anuncios en cada búsqueda. Eso contradecía mi argumento de que los precios cambian poco, y me dio 3 opciones.
 - **Qué decidí (2.ª vez):** bajarlo a **30 días**, el periodo que había pensado al principio. Si una búsqueda "mala" se guarda, con 60 días ese error lo verían todos los vendedores durante 2 meses.
 - **Commits:** `4b3df4d` Caché de 60 días… y `9cbf723` Caché a 30 días (antes 60), porque mi prueba mostró que la mediana brinca…
 
@@ -93,6 +94,9 @@ IS = sistema inteligente (Claude, en Claude Code y en el chat). **Este README lo
 - **Qué decidí:** cerrar el registro y borrar esa cuenta: "blíndalo de la mejor manera posible". Si algún día una regla de seguridad se escribe mal, una cuenta cualquiera podría entrar al panel, donde "se pueden hacer todas las modificaciones".
 - **Verificación:** un intento de registro ahora responde `signup_disabled`. Solo queda la cuenta de administrador.
 - **Commit:** `856708d` Registro de cuentas cerrado, porque ya había una cuenta sospechosa con correo desechable
+
+### Autoevaluación y uso de IA
+Están en [AUTOEVALUACION.md](AUTOEVALUACION.md).
 
 ### Commits con mensaje genérico
 Los commits de `main` (`v1.0: sitio AlumniCar publicado en alumnicar.com` y `Documentación: README con las dos versiones`) dicen qué cambió pero no por qué. El porqué es la decisión 4: se publicó la v1.0 sin el comparador para tener el sitio en línea mientras el comparador se construía y probaba aparte. Desde el Assignment 2, cada commit de la rama `comparacion-precio` explica su decisión en el título o en la descripción.
