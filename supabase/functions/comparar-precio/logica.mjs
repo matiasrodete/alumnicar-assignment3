@@ -10,6 +10,10 @@ export const RANGO_ANIOS = 1;      // compara contra el mismo año, uno antes y 
 export const MAX_ANUNCIOS_APIFY = 80;
 export const MAX_COMPARACIONES_CORREO = 3; // por correo cada 24 h (cada consulta gasta créditos de Apify)
 export const MAX_COMPARACIONES_IP = 10;    // por conexión cada 24 h
+// Tope GLOBAL de búsquedas nuevas en Apify por mes (calendario, UTC), sin importar quién pregunte.
+// ~US$0.20 cada una × 20 = ~US$4, dentro del crédito gratis de Apify (US$5/mes). Protege contra
+// alguien que invente correos y cambie de IP para gastar créditos. Lo que sale de la caché no cuenta.
+export const MAX_CONSULTAS_APIFY_MES = 20;
 
 export const MENSAJES = {
   precio_invalido: "Revisa el precio del vendedor: escribe solo números mayores a cero, por ejemplo 350000.",
@@ -18,6 +22,7 @@ export const MENSAJES = {
   limite: "Ya hiciste 3 comparaciones hoy con este correo. Intenta mañana o escríbenos y te ayudamos con el precio.",
   pocos_datos: "Pocos datos para comparar",
   sin_respuesta: "No se pudo consultar el precio, intenta más tarde",
+  tope: "Este mes ya no podemos buscar modelos nuevos en Mercado Libre. Escríbenos y te ayudamos con el precio.",
   arriba: "Por encima del mercado",
   en_linea: "En línea con el mercado",
   abajo: "Por debajo del mercado",
@@ -184,15 +189,26 @@ export const recortarAnuncio = a => ({
 // Envuelve la consulta a Apify: si la misma búsqueda se hizo hace menos de CACHE_DIAS, usa esos anuncios.
 // Si la caché falla (tabla no existe, error de red), se consulta Apify normal: la caché nunca rompe la comparación.
 // estado.deCache queda en true cuando la respuesta salió de la caché.
-export function conCache(consultar, cache, estado = {}) {
-  if (!cache) return consultar;
+// tope (opcional): { contarMes() => Promise<número>, registrar(clave) } — búsquedas nuevas de este mes.
+// Si ya se llegó a MAX_CONSULTAS_APIFY_MES, lanza un error con code "tope" (sin llamar a Apify).
+// Si no se puede contar, NO se llama a Apify: ante la duda, se protege el crédito.
+export function conCache(consultar, cache, estado = {}, tope = null) {
+  if (!cache && !tope) return consultar;
   return async (input) => {
     const clave = claveCache(input);
-    try {
-      const guardados = await cache.leer(clave, CACHE_DIAS);
-      if (Array.isArray(guardados) && guardados.length) { estado.deCache = true; return guardados; }
-    } catch { /* sin caché: sigue con Apify */ }
+    if (cache) {
+      try {
+        const guardados = await cache.leer(clave, CACHE_DIAS);
+        if (Array.isArray(guardados) && guardados.length) { estado.deCache = true; return guardados; }
+      } catch { /* sin caché: sigue con Apify */ }
+    }
+    if (tope) {
+      const usadas = await tope.contarMes();
+      if (!(usadas < MAX_CONSULTAS_APIFY_MES)) throw Object.assign(new Error("tope mensual de Apify"), { code: "tope" });
+      await tope.registrar(clave);
+    }
     const anuncios = await consultar(input);
+    if (!cache) return anuncios;
     if (Array.isArray(anuncios) && anuncios.length) {
       await Promise.resolve(cache.guardar(clave, anuncios.map(recortarAnuncio))).catch(() => {});
     }
@@ -210,7 +226,8 @@ export async function compararPrecio(body, consultarApify) {
   let anuncios;
   try {
     anuncios = await consultarApify(entradaApify(datos));
-  } catch {
+  } catch (e) {
+    if (e?.code === "tope") return { estado: "tope", mensaje: MENSAJES.tope };
     return { estado: "sin_respuesta", mensaje: MENSAJES.sin_respuesta };
   }
   if (!Array.isArray(anuncios)) return { estado: "sin_respuesta", mensaje: MENSAJES.sin_respuesta };

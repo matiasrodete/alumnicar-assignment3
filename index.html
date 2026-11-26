@@ -1598,6 +1598,8 @@ document.getElementById("form").addEventListener("submit", e => {
     car_ref: f.car && !document.getElementById("carWrap").hidden ? (f.car.value || null) : null, message: f.msg.value.trim().slice(0,2000) || null,
   }).then(({ error }) => {
     btn.disabled = false;
+    // "Demasiadas solicitudes…" viene de la regla anti-spam de la base de datos (supabase/06_seguridad.sql)
+    if (error && /Demasiadas solicitudes/.test(error.message || "")) { ok.className = "msg warn"; ok.textContent = "Ya recibimos tus mensajes de hoy. Te respondemos en menos de 24 horas; si es urgente, escríbenos por WhatsApp."; return; }
     if (error) { ok.className = "msg warn"; ok.textContent = "No se pudo enviar. Intenta de nuevo o escríbenos por WhatsApp."; return; }
     ok.className = "msg"; ok.textContent = `Gracias, ${first}. Recibimos tu mensaje y te respondemos en menos de 24 horas.`;
     e.target.reset(); syncUni(); syncIntent();

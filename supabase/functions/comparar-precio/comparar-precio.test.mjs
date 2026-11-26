@@ -401,3 +401,52 @@ test("caché: el público también la usa, y el límite de 3 por correo sigue co
   const h2 = crearManejador({ token: "t", esAdmin: async () => false, registro: registroFalso({ porCorreo: 3 }), cache, fetchFn });
   assert.equal((await h2(pedir({ ...base, ...contacto, precio_vendedor: "400000" }))).status, 429);
 });
+
+// --- tope mensual de búsquedas nuevas en Apify (crédito gratis de US$5) ---
+import { MAX_CONSULTAS_APIFY_MES } from "./logica.mjs";
+function topeFalso(usadas = 0, { falla = false } = {}) {
+  const t = { usadas, registradas: [] };
+  t.contarMes = async () => { if (falla) throw new Error("sin tabla"); return t.usadas; };
+  t.registrar = async c => { t.registradas.push(c); t.usadas++; };
+  return t;
+}
+test("tope: 20 búsquedas nuevas al mes = ~US$4, dentro de los US$5 gratis de Apify", () => {
+  assert.equal(MAX_CONSULTAS_APIFY_MES, 20);
+  assert.ok(MAX_CONSULTAS_APIFY_MES * 0.20 <= 5);
+});
+test("tope: con 20 ya usadas no llama a Apify y avisa (público y administradores)", async () => {
+  for (const admin of [false, true]) {
+    const fetchFn = apifyContado();
+    const h = crearManejador({ token: "t", esAdmin: async () => admin, registro: registroFalso(), cache: cacheFalsa(), tope: topeFalso(20), fetchFn });
+    const r = await (await h(pedir({ ...base, ...contacto, precio_vendedor: "400000" }, { auth: admin ? "Bearer a" : "" }))).json();
+    assert.equal(r.estado, "tope");
+    assert.equal(r.mensaje, MENSAJES.tope);
+    assert.equal(fetchFn.llamadas, 0);
+  }
+});
+test("tope: la búsqueda 20 sí pasa y se registra; la 21 ya no", async () => {
+  const tope = topeFalso(19), fetchFn = apifyContado();
+  const h = crearManejador({ token: "t", esAdmin: async () => true, registro: registroFalso(), cache: cacheFalsa(), tope, fetchFn });
+  const r1 = await (await h(pedir({ ...base, precio_vendedor: "400000" }, { auth: "Bearer a" }))).json();
+  assert.equal(r1.estado, "en_linea");
+  assert.deepEqual(tope.registradas, ["mazda 3"]);
+  const r2 = await (await h(pedir({ ...base, modelo: "CX30", precio_vendedor: "400000" }, { auth: "Bearer a" }))).json();
+  assert.equal(r2.estado, "tope");
+  assert.equal(fetchFn.llamadas, 1);
+});
+test("tope: lo que sale de la caché sigue funcionando aunque se haya llegado al tope", async () => {
+  const cache = cacheFalsa(); cache.m.set("mazda 3", [390000, 400000, 410000].map(p => anuncio(p)));
+  const fetchFn = apifyContado();
+  const h = crearManejador({ token: "t", esAdmin: async () => true, registro: registroFalso(), cache, tope: topeFalso(20), fetchFn });
+  const r = await (await h(pedir({ ...base, precio_vendedor: "400000" }, { auth: "Bearer a" }))).json();
+  assert.equal(r.estado, "en_linea");
+  assert.equal(r.de_cache, true);
+  assert.equal(fetchFn.llamadas, 0);
+});
+test("tope: si no se puede contar, NO se llama a Apify (ante la duda se protege el crédito)", async () => {
+  const fetchFn = apifyContado();
+  const h = crearManejador({ token: "t", esAdmin: async () => true, registro: registroFalso(), cache: cacheFalsa(), tope: topeFalso(0, { falla: true }), fetchFn });
+  const r = await (await h(pedir({ ...base, precio_vendedor: "400000" }, { auth: "Bearer a" }))).json();
+  assert.equal(r.estado, "sin_respuesta");
+  assert.equal(fetchFn.llamadas, 0);
+});

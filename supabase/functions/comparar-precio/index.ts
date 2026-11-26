@@ -59,4 +59,20 @@ const cache = {
   },
 };
 
-Deno.serve(crearManejador({ token: Deno.env.get("APIFY_TOKEN"), esAdmin, registro, cache }));
+// Tope mensual de búsquedas nuevas en Apify (tabla consultas_apify, ver supabase/06_seguridad.sql).
+const tope = {
+  async contarMes() {
+    const hoy = new Date();
+    const inicioMes = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), 1)).toISOString();
+    const { count, error } = await servicio.from("consultas_apify")
+      .select("id", { count: "exact", head: true }).gte("created_at", inicioMes);
+    if (error) throw error;
+    return count ?? 0;
+  },
+  async registrar(clave: string) {
+    const { error } = await servicio.from("consultas_apify").insert({ clave });
+    if (error) throw error;
+  },
+};
+
+Deno.serve(crearManejador({ token: Deno.env.get("APIFY_TOKEN"), esAdmin, registro, cache, tope }));

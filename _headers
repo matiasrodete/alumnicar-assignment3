@@ -1,0 +1,9 @@
+# Cabeceras de seguridad que Cloudflare agrega a todas las páginas del sitio.
+# - Nadie puede meter el sitio dentro de otra página (clickjacking contra el inicio de sesión de admin).
+# - El navegador no "adivina" tipos de archivo, y no se manda la URL completa a otros sitios.
+/*
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

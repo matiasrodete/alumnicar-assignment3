@@ -35,12 +35,13 @@ const pesos = n => "$" + Math.round(n).toLocaleString("es-MX");
 //   esAdmin(authHeader) => Promise<boolean>,
 //   registro: { contar({correo, ip}) => Promise<{correo, ip}>, guardar(fila), crearLead(lead) },
 //   cache?: { leer(clave, dias) => Promise<anuncios|null>, guardar(clave, anuncios) },
+//   tope?: { contarMes() => Promise<number>, registrar(clave) }  (búsquedas nuevas en Apify este mes),
 //   fetchFn?
 // }
 // Administradores (panel): sin límite y sin datos de contacto.
 // Público (Vende tu coche): pide nombre y correo; máximo 3 comparaciones por correo y 10 por conexión
 // cada 24 h. La primera comparación del día de cada correo llega al equipo como contacto "vender".
-export function crearManejador({ token, esAdmin, registro, cache, fetchFn = fetch }) {
+export function crearManejador({ token, esAdmin, registro, cache, tope, fetchFn = fetch }) {
   return async (req) => {
     if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
     if (req.method !== "POST") return json({ estado: "error", mensaje: "Método no permitido" }, 405);
@@ -53,7 +54,7 @@ export function crearManejador({ token, esAdmin, registro, cache, fetchFn = fetc
     const apify = token ? consultarApifyCon(token, fetchFn) : async () => { throw new Error("Falta APIFY_TOKEN"); };
     // Caché de 30 días por búsqueda: la misma marca + modelo no vuelve a pagar Apify ni esperar 30-60 s
     const uso = { deCache: false };
-    const consultar = conCache(apify, cache, uso);
+    const consultar = conCache(apify, cache, uso, tope); // tope de 20 búsquedas nuevas al mes (crédito gratis)
     const responder = (r, status) => json(r.estado && r.anuncios !== undefined ? { ...r, de_cache: uso.deCache } : r, status);
 
     const auth = req.headers.get("Authorization") || "";
