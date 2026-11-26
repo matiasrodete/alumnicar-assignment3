@@ -25,7 +25,7 @@ Es una página estática (`index.html` + `config.js`). Supabase guarda la base d
 
 ## Decisiones de diseño vs. sugerencias del IS
 
-IS = sistema inteligente (Claude, en Claude Code y en el chat). Cada entrada dice qué propuso el IS, qué decidí y por qué, cómo lo verifiqué y en qué commit quedó. Están en el orden del proyecto: mockup → funcionalidad → deployment → escalabilidad → seguridad.
+IS = sistema inteligente (Claude, en Claude Code y en el chat). **Este README lo redactó Claude** a partir de mi conversación con él, citando mis palabras; las decisiones y los porqués son míos y revisé cada entrada. Cada entrada dice qué propuso el IS, qué decidí y por qué, cómo lo verifiqué y en qué commit quedó. Están en el orden del proyecto: mockup → funcionalidad → deployment → escalabilidad → seguridad.
 
 ### 1. Mockup → rediseño (25 nov) · **Rechazo**
 - **Qué propuso el IS:** dejar el mockup de los Assignments 1 y 2 como estaba (hero con medidor de presupuesto, quiz, secciones de compra y venta) y documentar solo la auditoría de la especificación de la Sesión 19.
