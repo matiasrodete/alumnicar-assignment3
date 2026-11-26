@@ -6,11 +6,13 @@
 
 ## LO en el que más crecí: #Accountability
 
-En el Assignment 1 usé IA para construir casi todo el mockup de AlumniCar, pero no lo documenté: mi objetivo era el producto. Mi repositorio de esa etapa tiene 2 commits ("v1.0: sitio AlumniCar publicado en alumnicar.com" y "Documentación: README con las dos versiones") y ninguna bitácora ni declaración de uso de IA. Si el profesor me preguntaba, se lo explicaba con honestidad, pero no quedaba escrito en ningún lado.
+En el Assignment 1 usé IA para construir casi todo el mockup de AlumniCar, pero no lo documenté: mi objetivo era el producto. Mi repositorio de esa etapa tiene solo 2 commits genéricos ("v1.0: sitio AlumniCar publicado en alumnicar.com" y "Documentación: README…") y ninguna bitácora ni declaración de uso de IA. Si el profesor me preguntaba, se lo explicaba con honestidad, pero no quedaba escrito en ningún lado.
 
 Lo que cambió no fue mi conocimiento técnico, que creció de forma natural con el curso, sino que empecé a dejar registro de qué propuso la IA y qué decidí yo. En el Assignment 2 escribí una bitácora con 4 entradas ([PROMPT_LOG.md](PROMPT_LOG.md)). En el Assignment 3, el README tiene 7 decisiones, una por etapa, y el commit de cada decisión dice "MI DECISIÓN" y por qué.
 
 El momento que mejor lo muestra es la caché de Apify (decisión 5): primero subí la propuesta de 7 a 60 días, pero al revisar con la IA mi propia prueba vimos que la mediana del Mazda 3 bajó de $319,000 a $299,000 en 8 días, y la bajé a 30. Lo dejé escrito aunque significaba admitir que me equivoqué, igual que cuando acepté un tope de "20 al día" y la IA me corrigió las cuentas (US$120 al mes, no US$5). Antes habría guardado solo el resultado final; ahora documento también cómo llegué a él.
+
+Ese registro también me deja ver el criterio que sostuvo el proyecto en todas sus etapas: ni fe ciega en la IA ni rechazo por principio. Rechacé el mockup aunque ya funcionaba, porque no invitaba al cliente a quedarse. En la funcionalidad acepté B y C, modifiqué A (el modelo en el título o en la descripción) y rechacé D, porque ya había probado yo mismo el Mazda 3. En el deployment decidí, sin que la IA lo señalara, no publicar en alumnicar.com hasta tener revisión legal. En la escalabilidad y la seguridad acepté que la IA corrigiera mis cuentas y pedí blindar el registro cuando apareció una cuenta sospechosa. Acepto cuando la evidencia lo justifica, cambio cuando mi contexto lo pide y rechazo cuando ya lo comprobé.
 
 ## Uso de IA
 
