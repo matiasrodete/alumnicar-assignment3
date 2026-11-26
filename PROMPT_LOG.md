@@ -1,5 +1,7 @@
 # Bitácora de prompts (PROMPT_LOG) — Assignment 2 · AlumniCar
 
+> **Assignment 3:** las decisiones de diseño, escalabilidad y seguridad del producto final están en el [README, sección "Decisiones de diseño vs. sugerencias del IS"](README.md#decisiones-de-diseño-vs-sugerencias-del-is).
+
 **Deploy (liga de prueba con la función):** https://alumnicar-preview.jolly-night-811e.workers.dev — rama `comparacion-precio` en Cloudflare.
 **Sitio oficial:** https://alumnicar.com — sigue en la v1.0, sin la función.
 
