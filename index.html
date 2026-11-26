@@ -1407,9 +1407,11 @@ const QUESTIONS = [
   {k:"gear", q:"¿Qué transmisión prefieres?", opts:[["Automática","Automática"],["Estándar","Estándar"],["any","Me da igual"]]},
 ];
 const RANGES = {"300":[0,300000], "450":[300000,450000], "600":[450000,600000], "max":[600000,Infinity]};
-const PREMIUM = ["BMW","Audi","Mercedes-Benz","MINI","Tesla"];
-const THRIFTY = ["Toyota","Kia","Nissan","Chevrolet","Volkswagen","Honda"];
-const SPORTY = ["AC-0101","AC-0111","AC-0117","AC-0119","AC-0123"];
+const PREMIUM = ["BMW","Audi","Mercedes-Benz","MINI","Tesla","Volvo","Porsche"];
+const THRIFTY = ["Toyota","Kia","Nissan","Chevrolet","Volkswagen","Honda","Hyundai","Suzuki","Mitsubishi"];
+const SPORTY = ["AC-0101","AC-0111","AC-0117","AC-0119","AC-0123","AC-0130","AC-0136","AC-0137","AC-0146","AC-0149","AC-0150","AC-0153"];
+// SUVs con tercera fila de asientos: la Tiguan de muestra o cualquiera que lo diga en su descripción
+const tercerFila = c => c.ref === "AC-0110" || /tercera fila/i.test(c.desc || "");
 let qStep = 0, answers = {};
 
 function scoreCar(c, a){
@@ -1426,7 +1428,7 @@ function scoreCar(c, a){
   if (a.use === "mix") { if (b==="SUV") { sc += 2; why.push("Una SUV sirve para ciudad y carretera"); } else sc += 1; }
   if (a.people === "2" && b==="Hatchback") sc += 1;
   if (a.people === "4" && (b==="Sedán"||b==="SUV")) { sc += 1; why.push("Caben 4 personas cómodas"); }
-  if (a.people === "5") { if (c.ref==="AC-0110") { sc += 4; why.push("Tiene tercera fila de asientos"); } else if (b==="SUV") { sc += 2; why.push("Es de las opciones más amplias"); } else if (b==="Hatchback") { sc -= 2; miss("es chico para 5 personas"); } }
+  if (a.people === "5") { if (tercerFila(c)) { sc += 4; why.push("Tiene tercera fila de asientos"); } else if (b==="SUV") { sc += 2; why.push("Es de las opciones más amplias"); } else if (b==="Hatchback") { sc -= 2; miss("es chico para 5 personas"); } }
   if (a.prio === "save") { if (c.fuel!=="Gasolina") { sc += 3; why.push(c.fuel==="Eléctrico" ? "No gasta gasolina" : "Es híbrido: rinde más de 20 km/l"); } else if (THRIFTY.includes(c.make)) { sc += 2; why.push(`${c.make} tiene mantenimiento y refacciones accesibles`); } if (PREMIUM.includes(c.make)) sc -= 1; }
   if (a.prio === "space") { if (b==="SUV"||b==="Pickup") { sc += 2; why.push("Mucho espacio para pasajeros y equipaje"); } else if (b==="Sedán") sc += 1; }
   if (a.prio === "premium") { if (PREMIUM.includes(c.make)) { sc += 3; why.push(`Marca premium: ${c.make}`); } else if (c.make==="Mazda") { sc += 1; why.push("Mazda tiene acabados de nivel premium"); } }
