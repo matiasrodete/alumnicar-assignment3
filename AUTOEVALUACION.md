@@ -10,7 +10,7 @@ En el Assignment 1 usé IA para construir casi todo el mockup de AlumniCar, pero
 
 Lo que cambió no fue mi conocimiento técnico, que creció de forma natural con el curso, sino que empecé a dejar registro de qué propuso la IA y qué decidí yo. En el Assignment 2 escribí una bitácora con 4 entradas ([PROMPT_LOG.md](PROMPT_LOG.md)). En el Assignment 3, el README tiene 7 decisiones, una por etapa, y el commit de cada decisión dice "MI DECISIÓN" y por qué.
 
-El momento que mejor lo muestra es la caché de Apify (decisión 5): primero subí la propuesta de 7 a 60 días, pero mi propia prueba mostró que la mediana del Mazda 3 bajó de $319,000 a $299,000 en 8 días, y la bajé a 30. Lo dejé escrito aunque significaba admitir que me equivoqué, igual que cuando acepté un tope de "20 al día" y la IA me corrigió las cuentas (US$120 al mes, no US$5). Antes habría guardado solo el resultado final; ahora documento también cómo llegué a él.
+El momento que mejor lo muestra es la caché de Apify (decisión 5): primero subí la propuesta de 7 a 60 días, pero al revisar con la IA mi propia prueba vimos que la mediana del Mazda 3 bajó de $319,000 a $299,000 en 8 días, y la bajé a 30. Lo dejé escrito aunque significaba admitir que me equivoqué, igual que cuando acepté un tope de "20 al día" y la IA me corrigió las cuentas (US$120 al mes, no US$5). Antes habría guardado solo el resultado final; ahora documento también cómo llegué a él.
 
 ## Uso de IA
 
